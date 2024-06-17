@@ -1,9 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pltS
 import math
+import gym
 
 #T_m_max = xxx (Nm)
-#F_cl_max = 10000 (N)
+#F_cl_max = 10000 (N)S
 #motor_speed _max = xxx (rad/s)
 
 fc = 10.37e-3;           # Coulomb friction [Nm]
