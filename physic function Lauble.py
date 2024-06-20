@@ -48,20 +48,26 @@ def clamping_force(motor_pos):
 
 def motor_current(motor_current_tgt, motor_current_past, RC_const, T_sample):
     """
-    Calculate the motor current i_m based with a low pass filter as motor current controller.
+    Calculates the current value of the motor using a low-pass filter algorithm.
+
+    This function is used to update the motor current through a first-order low-pass filter, which helps to smooth the motor current control signal,
+    reducing the impact of high-frequency noise and ensuring the stability of the motor operation.
 
     Parameters:
-    motor_current: The tested current in A.
-    motor_current_past: The last time tested current in A.
-    RC_const: RC constant of the low pass filter.
-    T_sampel: The sample time of the system.
+    motor_current_tgt: The target motor current value in Amperes.
+    motor_current_past: The previous motor current value in Amperes.
+    RC_const: The RC constant of the low-pass filter.
+    T_sample: The sampling period of the control system.
 
     Returns:
-    float: The calculated force F_cl.
+    The calculated new motor current value in Amperes.
     """
+    # Calculate the filtering coefficient A, which determines the weight of the current target value and the previous value in the new current value.
     A = T_sample / (RC_const + T_sample)
-    motor_current =  A * motor_current_tgt + (1-A) * motor_current_past
+    # Calculate the new motor current value by weighting the target current and the previous current.
+    motor_current = A * motor_current_tgt + (1 - A) * motor_current_past
     return motor_current
+    
 
 # # Example usage
 # motor_current_past = 0
@@ -105,3 +111,4 @@ T_m = km * motor_current(motor_current_tgt, motor_current_past, RC_const, T_samp
 F_cl = clamping_force(motor_pos)
 T_f = friction_torque(fc, fv, fcc, motor_vel)
 motor_acc = 1/J_m * (T_m - gamma * F_cl - T_f)
+
