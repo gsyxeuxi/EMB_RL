@@ -127,25 +127,24 @@ chi = np.zeros((4,2,1))
 fi_matrix = FI_matrix()
 
 T = time.time()
-det_T = 0.01
+det_T = 0.001
 x = x0
 fi_info = np.zeros((4,4))
 for k in range(10):
-    # u = k * det_T
-    u = 0.001
+    u = (k+1) * det_T * 100 + 0.5
     dx = fi_matrix.f(x, u)
     x = x + det_T * dx
-    # print('x0 is', x[0])
+    # print(x[0], x[1])
     J_f = fi_matrix.jacobian_f(x, u)
     J_h = fi_matrix.jacobian_h(x)
     df_theta = fi_matrix.df_dtheta(x, u)
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
     fi_info += fi_matrix.fisher_info_matrix(dh_theta)
-    print('det is', np.linalg.det(fi_info))
-    print(-np.log(np.linalg.det(fi_info)))
-    # if k > 1:
-    #     print('det M-1', np.linalg.det(np.linalg.inv(fi_info)))
+    # print('det is', np.linalg.det(np.linalg.inv(fi_info)))
+    # print(-np.log(np.linalg.det(fi_info)))
+    if k > 1:
+        print('det M-1', np.linalg.det(np.linalg.inv(fi_info)))
     #     print(-np.log(np.linalg.det(fi_info)))
 
 

@@ -11,8 +11,9 @@ class FI_matrix(object):
         self.gamma = 1.889e-05  # Proportional constant
         self.k1 = 23.04  # Elasticity constant
         self.fc = 10.37e-3  # Coulomb friction coefficient
-        self.epsilon = 1000  # Excitation function coefficient
+        self.epsilon = 0.5  # Excitation function coefficient
         self.fv = 2.16e-5  # Viscous friction coefficient
+        self.Ts = 1.2 * (self.fc + self.fv * self.epsilon) #Static friction torque
         # self.theta = self.km, self.k1, self.fc, self.fv, self.J, self.gamma, self.epsilon
 
     def f(self, x, u):
@@ -29,10 +30,26 @@ class FI_matrix(object):
         """
         x1, x2 = x
         dx1 = x2
-        if x1 > 0:
-            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (self.fc * np.tanh(self.epsilon * x2) + self.fv * x2)
-        else: 
-            dx2 = (self.km / self.J) * u - (1 / self.J) * (self.fc * np.tanh(self.epsilon * x2) + self.fv * x2)
+        #when there is clamp force, x1>0
+        if x1 > 0 and x2 > self.epsilon:
+            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (self.fc + self.fv * x2)
+        if x1 > 0 and x2 < -self.epsilon:
+            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (-self.fc + self.fv * x2)
+        if x1 > 0 and abs(x2) <= self.epsilon:
+            if (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 > self.Ts: #overcome the maximum static friction
+                dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - self.Ts
+            else: #lockup
+                dx2 = 0
+        #when there is no clamp force, x1<=0
+        if x1 <= 0 and x2 > self.epsilon:
+            dx2 = (self.km / self.J) * u - (1 / self.J) * (self.fc + self.fv * x2)
+        if x1 <= 0 and x2 < -self.epsilon:
+            dx2 = (self.km / self.J) * u - (1 / self.J) * (-self.fc + self.fv * x2)
+        if x1 <= 0 and abs(x2) <= self.epsilon:
+            if (self.km / self.J) * u > self.Ts: #overcome the maximum static friction
+                dx2 = (self.km / self.J) * u - self.Ts
+            else: #lockup
+                dx2 = 0
         return np.array([dx1, dx2])
 
     def h(self, x):
@@ -52,10 +69,26 @@ class FI_matrix(object):
         """
         x1, x2 = x
         df1_dx = [0, 1]
-        if x1 > 0:
-            df2_dx = [-self.gamma * self.k1 / self.J, -1 / self.J * (self.fc * self.epsilon * (1 / np.cosh(self.epsilon * x2))**2 + self.fv)]
-        else:
-            df2_dx = [0, -1 / self.J * (self.fc * self.epsilon * (1 / np.cosh(self.epsilon * x2))**2 + self.fv)]
+ 
+        if x1 > 0 and x2 > self.epsilon:
+            df2_dx = [-self.gamma * self.k1 / self.J, -1 / self.J * self.fv]
+        if x1 > 0 and x2 < -self.epsilon:
+            df2_dx = [-self.gamma * self.k1 / self.J, -1 / self.J * self.fv]
+        if x1 > 0 and abs(x2) <= self.epsilon:
+            if (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 > self.Ts: #overcome the maximum static friction
+                df2_dx = [-self.gamma * self.k1 / self.J, 0]
+            else: #lockup
+                df2_dx = [0, 0]
+        #when there is no clamp force, x1<=0
+        if x1 <= 0 and x2 > self.epsilon:
+            df2_dx = [0, -1 / self.J * self.fv]
+        if x1 <= 0 and x2 < -self.epsilon:
+            df2_dx = [0, -1 / self.J * self.fv]
+        if x1 <= 0 and abs(x2) <= self.epsilon:
+            if (self.km / self.J) * u > self.Ts: #overcome the maximum static friction
+                df2_dx = [0, 0]
+            else: #lockup
+                df2_dx = [0, 0]
         return np.array([df1_dx, df2_dx])
 
     def jacobian_h(self, x):
@@ -76,18 +109,51 @@ class FI_matrix(object):
         output: df/dtheta
         """
         x1, x2 = x
-        # df_dkm = np.array([0, 1 / self.J * u]).reshape(2,1)
-        # df_dk1 = np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
-        # df_dfc = np.array([0, -np.tanh(self.epsilon * x2) / self.J]).reshape(2,1)
-        # df_dfv = np.array([0, -x2 / self.J]).reshape(2,1)
-        # return np.array([df_dkm, df_dk1, df_dfc, df_dfv])
-        df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
-        if x1 > 0:
+        #when there is clamp force, x1>0
+        if x1 > 0 and x2 > self.epsilon:
+            df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
-        else:
+            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (self.fc + self.fv * x2)
+        if x1 > 0 and x2 < -self.epsilon:
+            df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
+            df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
+            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (-self.fc + self.fv * x2)
+        if x1 > 0 and abs(x2) <= self.epsilon:
+            if (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 > self.Ts: #overcome the maximum static friction
+                df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
+                df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
+                dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - self.Ts
+            else: #lockup
+                df_dkm_nom = self.km * np.array([0, 0]).reshape(2,1)
+                df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
+                dx2 = 0
+        #when there is no clamp force, x1<=0
+        if x1 <= 0 and x2 > self.epsilon:
+            df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
-        df_dfc_nom = self.fc * np.array([0, -np.tanh(self.epsilon * x2) / self.J]).reshape(2,1)
-        df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
+            dx2 = (self.km / self.J) * u - (1 / self.J) * (self.fc + self.fv * x2)
+        if x1 <= 0 and x2 < -self.epsilon:
+            df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
+            df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
+            dx2 = (self.km / self.J) * u - (1 / self.J) * (-self.fc + self.fv * x2)
+        if x1 <= 0 and abs(x2) <= self.epsilon:
+            if (self.km / self.J) * u > self.Ts: #overcome the maximum static friction
+                df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
+                df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
+                dx2 = (self.km / self.J) * u - self.Ts
+            else: #lockup
+                df_dkm_nom = self.km * np.array([0, 0]).reshape(2,1)
+                df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
+                dx2 = 0
+
+
+        # df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
+        # if x1 > 0:
+        #     df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
+        # else:
+        #     df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
+        # df_dfc_nom = self.fc * np.array([0, -np.tanh(self.epsilon * x2) / self.J]).reshape(2,1)
+        # df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
         return np.array([df_dkm_nom, df_dk1_nom, df_dfc_nom, df_dfv_nom])
     
 

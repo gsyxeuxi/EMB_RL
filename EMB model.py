@@ -2,8 +2,6 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
-print(np.cosh(10 * 10))
-
 # Define parameters
 J = 4.624e-06  # Moment of inertia
 k_m = 21.7e-03  # Motor constant
@@ -12,6 +10,8 @@ k_1 = 23.04  # Elasticity constant
 f_c = 10.37e-3  # Coulomb friction coefficient
 epsilon = 1000  # Excitation function coefficient
 f_v = 2.16e-5  # Viscous friction coefficient
+
+print((f_c + f_v * 0.5)/k_m)
 
 # Define the system dynamics function f(x, u, theta)
 def f(x, t, u, theta):
