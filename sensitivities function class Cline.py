@@ -1,6 +1,8 @@
 import numpy as np
 import time
 from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+import csv
 
 class FI_matrix(object):
 
@@ -11,10 +13,10 @@ class FI_matrix(object):
         self.gamma = 1.889e-05  # Proportional constant
         self.k1 = 23.04  # Elasticity constant
         self.fc = 10.37e-3  # Coulomb friction coefficient
-        self.epsilon = 0.5  # Excitation function coefficient
+        self.epsilon = 0.5  # Zero velocity bound
         self.fv = 2.16e-5  # Viscous friction coefficient
         self.Ts = 1.2 * (self.fc + self.fv * self.epsilon) #Static friction torque
-        # self.theta = self.km, self.k1, self.fc, self.fv, self.J, self.gamma, self.epsilon
+        self.dt = 0.001
 
     def f(self, x, u):
         """
@@ -113,58 +115,71 @@ class FI_matrix(object):
         if x1 > 0 and x2 > self.epsilon:
             df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
-            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (self.fc + self.fv * x2)
+            df_dfc_nom = self.fc * np.array([0, -1 / self.J]).reshape(2,1)
+            df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
+            df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
+            # dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (self.fc + self.fv * x2)
         if x1 > 0 and x2 < -self.epsilon:
             df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
-            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (-self.fc + self.fv * x2)
+            df_dfc_nom = self.fc * np.array([0, 1 / self.J]).reshape(2,1)
+            df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
+            df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
+            # dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (-self.fc + self.fv * x2)
         if x1 > 0 and abs(x2) <= self.epsilon:
             if (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 > self.Ts: #overcome the maximum static friction
                 df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
-                dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - self.Ts
+                df_dfc_nom = self.fc * np.array([0, 0]).reshape(2,1)
+                df_dfv_nom = self.fv * np.array([0, 0]).reshape(2,1)
+                df_dTs_nom = self.Ts * np.array([0, -1]).reshape(2,1) 
+                # dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - self.Ts
             else: #lockup
                 df_dkm_nom = self.km * np.array([0, 0]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
-                dx2 = 0
+                df_dfc_nom = self.fc * np.array([0, 0]).reshape(2,1)
+                df_dfv_nom = self.fv * np.array([0, 0]).reshape(2,1)
+                df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
+                # dx2 = 0
         #when there is no clamp force, x1<=0
         if x1 <= 0 and x2 > self.epsilon:
             df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
-            dx2 = (self.km / self.J) * u - (1 / self.J) * (self.fc + self.fv * x2)
+            df_dfc_nom = self.fc * np.array([0, -1 / self.J]).reshape(2,1)
+            df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
+            df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
+            # dx2 = (self.km / self.J) * u - (1 / self.J) * (self.fc + self.fv * x2)
         if x1 <= 0 and x2 < -self.epsilon:
             df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
-            dx2 = (self.km / self.J) * u - (1 / self.J) * (-self.fc + self.fv * x2)
+            df_dfc_nom = self.fc * np.array([0, 1 / self.J]).reshape(2,1)
+            df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
+            df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
+            # dx2 = (self.km / self.J) * u - (1 / self.J) * (-self.fc + self.fv * x2)
         if x1 <= 0 and abs(x2) <= self.epsilon:
             if (self.km / self.J) * u > self.Ts: #overcome the maximum static friction
                 df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
-                dx2 = (self.km / self.J) * u - self.Ts
+                df_dfc_nom = self.fc * np.array([0, 0]).reshape(2,1)
+                df_dfv_nom = self.fv * np.array([0, 0]).reshape(2,1)
+                df_dTs_nom = self.Ts * np.array([0, -1]).reshape(2,1) 
+                # dx2 = (self.km / self.J) * u - self.Ts
             else: #lockup
                 df_dkm_nom = self.km * np.array([0, 0]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
-                dx2 = 0
-
-
-        # df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
-        # if x1 > 0:
-        #     df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
-        # else:
-        #     df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
-        # df_dfc_nom = self.fc * np.array([0, -np.tanh(self.epsilon * x2) / self.J]).reshape(2,1)
-        # df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
-        return np.array([df_dkm_nom, df_dk1_nom, df_dfc_nom, df_dfv_nom])
+                df_dfc_nom = self.fc * np.array([0, 0]).reshape(2,1)
+                df_dfv_nom = self.fv * np.array([0, 0]).reshape(2,1)
+                df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
+                # dx2 = 0
+        return np.concatenate((df_dkm_nom, df_dk1_nom, df_dfc_nom, df_dfv_nom, df_dTs_nom), axis=1)
     
-
     def sensitivity_x(self, J_f, df_dtheta, chi):
         """
         Define the sensitivity dx/dtheta with recursive algorithm
-        chi(k+1) = J_x * chi(k) + df_dtheta
+        chi(k+1) = chi(k) + dt * (J_x * chi(k) + df_dtheta)
         output: chi(k+1)
         """
-        for i in range(len(df_dtheta)):
-            chi[i] = np.dot(J_f, chi[i]) + df_dtheta[i]
+        chi = chi + self.dt * (np.dot(J_f, chi) + df_dtheta)
         return chi
 
     def sensitivity_y(self, chi, J_h):
@@ -173,9 +188,7 @@ class FI_matrix(object):
         dh_dtheta(k) = J_h * chi(k)
         output: dh_dtheta(k)
         """
-        dh_dtheta = np.zeros((1, len(chi)))
-        for i in range(len(chi)):
-            dh_dtheta[0][i] = np.dot(J_h, chi[i]).item()
+        dh_dtheta = np.dot(J_h, chi)
         return dh_dtheta
     
     def fisher_info_matrix(self, dh_dtheta, R=1):
@@ -184,34 +197,84 @@ class FI_matrix(object):
         dh_dtheta(k) = J_h * chi(k)
         output: fi_info
         """
-        return np.dot(np.dot(dh_dtheta.reshape(-1,1), 1/R), dh_dtheta)
+        return np.dot(np.dot(dh_dtheta.reshape(-1,1), 1/R), dh_dtheta.reshape(1,-1))
 
 # Initial state
 x0 = np.array([0.0, 0.0])
-chi = np.zeros((4,2,1))
+chi = np.zeros((2,5))
+x0_values = []
+x1_values = []
+time_values = []
+det_fi_values = []
+det_fi_newvalues = []
 
 fi_matrix = FI_matrix()
-
 T = time.time()
-det_T = 0.01
+det_T = 0.001
 x = x0
-fi_info = np.zeros((4,4))
-for k in range(10):
-    # u = k * det_T
-    u = 0.001
+fi_info = np.zeros((5,5))
+for k in range(350): #350 = 0.35s
+    u = 0.02*k
     dx = fi_matrix.f(x, u)
     x = x + det_T * dx
-    # print('x0 is', x[0])
+    x0_values.append(x[0])
+    x1_values.append(x[1])
+    time_values.append(k * det_T)
     J_f = fi_matrix.jacobian_f(x, u)
     J_h = fi_matrix.jacobian_h(x)
     df_theta = fi_matrix.df_dtheta(x, u)
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
-    fi_info += fi_matrix.fisher_info_matrix(dh_theta)
-    print('det is', np.linalg.det(fi_info))
-    print(-np.log(np.linalg.det(fi_info)))
-    # if k > 1:
-    #     print('det M-1', np.linalg.det(np.linalg.inv(fi_info)))
-    #     print(-np.log(np.linalg.det(fi_info)))
+    fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
+    fi_info += fi_info_new
+    det_fi = np.linalg.det(fi_info)
+    det_fi_values.append(det_fi)
+    det_fi_newvalues.append(np.linalg.det(fi_info_new))
+ 
+print(fi_info)
+print('det is', np.linalg.det(fi_info))
+# print(-np.log(np.linalg.det(fi_info)))
+
+# save as csv
+filename = 'output.csv'
+
+with open(filename, mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['x0', 'x1', 'time', 'det_fi'])
+    for x0, x1, time_value, det_fi_value in zip(x0_values, x1_values, time_values, det_fi_values):
+        writer.writerow([x0, x1, time_value, det_fi_value])
+
+
+# plt function
+plt.subplot(4, 1, 1)
+plt.plot(time_values, x0_values, label='x0')
+plt.xlabel('Time (s)')
+plt.ylabel('x0')
+plt.title('x0 vs Time')
+plt.legend()
+
+plt.subplot(4, 1, 2)
+plt.plot(time_values, x1_values, label='x1')
+plt.xlabel('Time (s)')
+plt.ylabel('x1')
+plt.title('x1 vs Time')
+plt.legend()
+
+plt.subplot(4, 1, 3)
+plt.plot(time_values, det_fi_values, label='det')
+plt.xlabel('Time (s)')
+plt.ylabel('det')
+plt.title('det vs Time')
+plt.legend()
+
+plt.subplot(4, 1, 4)
+plt.plot(time_values, det_fi_newvalues, label='det_new')
+plt.xlabel('Time (s)')
+plt.ylabel('det')
+plt.title('det vs Time')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
 
 
