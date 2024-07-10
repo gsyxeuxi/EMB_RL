@@ -13,7 +13,7 @@ class FI_matrix(object):
         self.gamma = 1.889e-05  # Proportional constant
         self.k1 = 23.04  # Elasticity constant
         self.fc = 10.37e-3  # Coulomb friction coefficient
-        self.epsilon = 0.5  # Zero velocity bound
+        self.epsilon = 0.5  # Zero velocity bound [rad/s]
         self.fv = 2.16e-5  # Viscous friction coefficient
         self.Ts = 1.2 * (self.fc + self.fv * self.epsilon) #Static friction torque
         self.dt = 0.001
@@ -227,6 +227,10 @@ for k in range(350): #350 = 0.35s
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
     fi_info += fi_info_new
+    C = np.linalg.eigvals(fi_info)
+    for i in range(len(C)):
+        if C[i] < 0:
+            print(k, C[i])
     det_fi = np.linalg.det(fi_info)
     det_fi_values.append(det_fi)
     det_fi_newvalues.append(np.linalg.det(fi_info_new))
@@ -236,7 +240,7 @@ print('det is', np.linalg.det(fi_info))
 # print(-np.log(np.linalg.det(fi_info)))
 
 # save as csv
-filename = 'output.csv'
+filename = 'output_0.02k.csv'
 
 with open(filename, mode='w', newline='') as file:
     writer = csv.writer(file)
@@ -270,11 +274,10 @@ plt.legend()
 plt.subplot(4, 1, 4)
 plt.plot(time_values, det_fi_newvalues, label='det_new')
 plt.xlabel('Time (s)')
-plt.ylabel('det')
-plt.title('det vs Time')
+plt.ylabel('det_new')
+plt.title('det_new vs Time')
 plt.legend()
 
 plt.tight_layout()
+plt.savefig('0.02k_350.png')
 plt.show()
-
-
