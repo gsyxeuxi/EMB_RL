@@ -96,3 +96,4 @@ J_h = fi_matrix.jacobian_f(x, u)
 fd_approximation = fi_matrix.finite_difference_approximation(x, u, d, epsilon)
 if (np.linalg.norm(fd_approximation - np.dot(d, J_h.T) < 1e-6)):
     print('analytical equal to Finite-Difference Approximations')
+    
