@@ -1,7 +1,7 @@
 import numpy as np
 import time
-from scipy.integrate import odeint
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import csv
 
 class FI_matrix(object):
@@ -17,8 +17,10 @@ class FI_matrix(object):
         self.fv = 2.16e-5  # Viscous friction coefficient
         self.Ts = 1.2 * (self.fc + self.fv * self.epsilon) #Static friction torque
         self.dt = 0.001
-
-    def f(self, x, u):
+        self.theta_tensor = tf.convert_to_tensor([self.km, self.k1, self.fc, self.fv, self.Ts])
+        print(self.theta_tensor)
+        
+    def f(self, x, u, theta):
         """
         Define the system dynamics of lumped parameter EMB model
         dx/dt = f(x, u, theta)
@@ -32,27 +34,29 @@ class FI_matrix(object):
         """
         x1, x2 = x
         dx1 = x2
+        km, k1, fc, fv, Ts = theta
         #when there is clamp force, x1>0
         if x1 > 0 and x2 > self.epsilon:
-            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (self.fc + self.fv * x2)
+            dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (fc + fv * x2)
         if x1 > 0 and x2 < -self.epsilon:
-            dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (-self.fc + self.fv * x2)
+            dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (-fc + fv * x2)
         if x1 > 0 and abs(x2) <= self.epsilon:
-            if (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 > self.Ts: #overcome the maximum static friction
-                dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - self.Ts
+            if (km / self.J) * u - (self.gamma * k1 / self.J) * x1 > Ts: #overcome the maximum static friction
+                dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - Ts
             else: #lockup
                 dx2 = 0
         #when there is no clamp force, x1<=0
         if x1 <= 0 and x2 > self.epsilon:
-            dx2 = (self.km / self.J) * u - (1 / self.J) * (self.fc + self.fv * x2)
+            dx2 = (km / self.J) * u - (1 / self.J) * (fc + fv * x2)
         if x1 <= 0 and x2 < -self.epsilon:
-            dx2 = (self.km / self.J) * u - (1 / self.J) * (-self.fc + self.fv * x2)
+            dx2 = (km / self.J) * u - (1 / self.J) * (-fc + fv * x2)
         if x1 <= 0 and abs(x2) <= self.epsilon:
-            if (self.km / self.J) * u > self.Ts: #overcome the maximum static friction
-                dx2 = (self.km / self.J) * u - self.Ts
+            if (km / self.J) * u > Ts: #overcome the maximum static friction
+                dx2 = (km / self.J) * u - Ts
             else: #lockup
                 dx2 = 0
-        return np.array([dx1, dx2])
+        # return np.array([dx1, dx2])
+        return tf.convert_to_tensor([dx1, dx2], dtype=tf.float32)
 
     def h(self, x):
         """
@@ -92,6 +96,16 @@ class FI_matrix(object):
             else: #lockup
                 df2_dx = [0, 0]
         return np.array([df1_dx, df2_dx])
+    
+    def jacobian_f_tf(self, x, u):
+        x_tensor = tf.constant(x, dtype=tf.float32)
+        u_tensor = tf.constant(u, dtype=tf.float32)
+        theta_tensor = self.theta_tensor
+        with tf.GradientTape() as tape:
+            tape.watch(x_tensor)
+            f_x = self.f(x_tensor, u_tensor, theta_tensor)
+        jacobian_matrix = np.array(tape.jacobian(f_x, x_tensor))
+        return jacobian_matrix
 
     def jacobian_h(self, x):
         """
@@ -103,6 +117,23 @@ class FI_matrix(object):
         dh_dx1 = 1
         dh_dx2 = 0
         return np.array([dh_dx1, dh_dx2])
+
+    def df_dtheta_tf(self, x, u):
+        """
+        Define the matrix of df_dtheta with each parameter
+        dx/dt = f(x, u, theta)
+        output: df/dtheta_norm = df/dtheta @ dtheta/dtheta_norm
+        """
+        x_tensor = tf.constant(x, dtype=tf.float32)
+        u_tensor = tf.constant(u, dtype=tf.float32)
+        theta_tensor = self.theta_tensor
+        with tf.GradientTape() as tape:
+            tape.watch(theta_tensor)
+            f_x = self.f(x_tensor, u_tensor, theta_tensor)
+        jacobian_df_dtheta = tape.jacobian(f_x, theta_tensor)
+        jacobian_dtheta_dtheta_norm = tf.linalg.diag([self.km, self.k1, self.fc, self.fv, self.Ts])
+        jacobian_df_dtheta_norm = np.array(tf.matmul(jacobian_df_dtheta, jacobian_dtheta_dtheta_norm))
+        return jacobian_df_dtheta_norm
 
     def df_dtheta(self, x, u):
         """
@@ -202,26 +233,30 @@ class FI_matrix(object):
 # Initial state
 x0 = np.array([0.0, 0.0])
 chi = np.zeros((2,5))
+fi_info = np.zeros((5,5))
+det_T = 0.001
+theta = np.array([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)]) #[self.km, self.k1, self.fc, self.fv, self.Ts]
+
 x0_values = []
 x1_values = []
 time_values = []
 det_fi_values = []
-det_fi_newvalues = []
 
 fi_matrix = FI_matrix()
 T = time.time()
-det_T = 0.001
 x = x0
-fi_info = np.zeros((5,5))
+
 for k in range(350): #350 = 0.35s
-    u = 0.02
-    dx = fi_matrix.f(x, u)
+    u = 0.02*k + 0.02
+    dx = fi_matrix.f(x, u, theta)
     x = x + det_T * dx
     x0_values.append(x[0])
     x1_values.append(x[1])
-    time_values.append(k * det_T)
+    time_values.append((k+1) * det_T)
+    # J_f = fi_matrix.jacobian_f_tf(x, u)
     J_f = fi_matrix.jacobian_f(x, u)
     J_h = fi_matrix.jacobian_h(x)
+    # df_theta = fi_matrix.df_dtheta_tf(x, u)
     df_theta = fi_matrix.df_dtheta(x, u)
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
@@ -233,8 +268,7 @@ for k in range(350): #350 = 0.35s
             print(k, C[i])
     det_fi = np.linalg.det(fi_info)
     det_fi_values.append(det_fi)
-    det_fi_newvalues.append(np.linalg.det(fi_info_new))
- 
+
 print(fi_info)
 print('det is', np.linalg.det(fi_info))
 # print(-np.log(np.linalg.det(fi_info)))
@@ -271,12 +305,12 @@ plt.ylabel('det')
 plt.title('det vs Time')
 plt.legend()
 
-plt.subplot(4, 1, 4)
-plt.plot(time_values, det_fi_newvalues, label='det_new')
-plt.xlabel('Time (s)')
-plt.ylabel('det_new')
-plt.title('det_new vs Time')
-plt.legend()
+# plt.subplot(4, 1, 4)
+# plt.plot(time_values, det_fi_newvalues, label='det_new')
+# plt.xlabel('Time (s)')
+# plt.ylabel('det_new')
+# plt.title('det_new vs Time')
+# plt.legend()
 
 plt.tight_layout()
 plt.savefig('0.02k_350.png')
