@@ -3,6 +3,7 @@ import time
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import csv
+import math
 
 class FI_matrix(object):
 
@@ -38,23 +39,31 @@ class FI_matrix(object):
         #when there is clamp force, x1>0
         if x1 > 0 and x2 > self.epsilon:
             dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (fc + fv * x2)
-        if x1 > 0 and x2 < -self.epsilon:
+            # print('1')
+        elif x1 > 0 and x2 < -self.epsilon:
             dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (-fc + fv * x2)
-        if x1 > 0 and abs(x2) <= self.epsilon:
-            if (km / self.J) * u - (self.gamma * k1 / self.J) * x1 > Ts: #overcome the maximum static friction
-                dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - Ts
+            # print('2')
+        elif x1 > 0 and abs(x2) <= self.epsilon:
+            if km * u - self.gamma * k1 * x1 > Ts: #overcome the maximum static friction
+                dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - Ts / self.J
+                # print('3')
             else: #lockup
-                dx2 = 0
+                dx2 =  (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - ((km / self.J) * u - (self.gamma * k1 / self.J) * x1)
+                # print('4')
         #when there is no clamp force, x1<=0
-        if x1 <= 0 and x2 > self.epsilon:
+        elif x1 <= 0 and x2 > self.epsilon:
             dx2 = (km / self.J) * u - (1 / self.J) * (fc + fv * x2)
-        if x1 <= 0 and x2 < -self.epsilon:
+            # print('5')
+        elif x1 <= 0 and x2 < -self.epsilon:
             dx2 = (km / self.J) * u - (1 / self.J) * (-fc + fv * x2)
-        if x1 <= 0 and abs(x2) <= self.epsilon:
-            if (km / self.J) * u > Ts: #overcome the maximum static friction
-                dx2 = (km / self.J) * u - Ts
+            # print('6')
+        elif x1 <= 0 and abs(x2) <= self.epsilon:
+            if km * u > Ts: #overcome the maximum static friction
+                dx2 = (km / self.J) * u - Ts / self.J
+                # print('7')
             else: #lockup
-                dx2 = 0
+                dx2 = (km / self.J) * u - (km / self.J) * u
+                # print('8')
         # return np.array([dx1, dx2])
         return tf.convert_to_tensor([dx1, dx2], dtype=tf.float32)
 
@@ -74,24 +83,24 @@ class FI_matrix(object):
         output: J_f
         """
         x1, x2 = x
-        df1_dx = [0, 1]
+        df1_dx = [0, 1] #dx1 = x2
  
         if x1 > 0 and x2 > self.epsilon:
             df2_dx = [-self.gamma * self.k1 / self.J, -1 / self.J * self.fv]
-        if x1 > 0 and x2 < -self.epsilon:
+        elif x1 > 0 and x2 < -self.epsilon:
             df2_dx = [-self.gamma * self.k1 / self.J, -1 / self.J * self.fv]
-        if x1 > 0 and abs(x2) <= self.epsilon:
-            if (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 > self.Ts: #overcome the maximum static friction
+        elif x1 > 0 and abs(x2) <= self.epsilon:
+            if self.km * u - self.gamma * self.k1 * x1 > self.Ts: #overcome the maximum static friction
                 df2_dx = [-self.gamma * self.k1 / self.J, 0]
             else: #lockup
                 df2_dx = [0, 0]
         #when there is no clamp force, x1<=0
-        if x1 <= 0 and x2 > self.epsilon:
+        elif x1 <= 0 and x2 > self.epsilon:
             df2_dx = [0, -1 / self.J * self.fv]
-        if x1 <= 0 and x2 < -self.epsilon:
+        elif x1 <= 0 and x2 < -self.epsilon:
             df2_dx = [0, -1 / self.J * self.fv]
-        if x1 <= 0 and abs(x2) <= self.epsilon:
-            if (self.km / self.J) * u > self.Ts: #overcome the maximum static friction
+        elif x1 <= 0 and abs(x2) <= self.epsilon:
+            if self.km * u > self.Ts: #overcome the maximum static friction
                 df2_dx = [0, 0]
             else: #lockup
                 df2_dx = [0, 0]
@@ -150,21 +159,21 @@ class FI_matrix(object):
             df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
             df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
             # dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (self.fc + self.fv * x2)
-        if x1 > 0 and x2 < -self.epsilon:
+        elif x1 > 0 and x2 < -self.epsilon:
             df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
             df_dfc_nom = self.fc * np.array([0, 1 / self.J]).reshape(2,1)
             df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
             df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
             # dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - (1 / self.J) * (-self.fc + self.fv * x2)
-        if x1 > 0 and abs(x2) <= self.epsilon:
-            if (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 > self.Ts: #overcome the maximum static friction
+        elif x1 > 0 and abs(x2) <= self.epsilon:
+            if self.km * u - self.gamma * self.k1 * x1 > self.Ts: #overcome the maximum static friction
                 df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, -self.gamma * x1 / self.J]).reshape(2,1)
                 df_dfc_nom = self.fc * np.array([0, 0]).reshape(2,1)
                 df_dfv_nom = self.fv * np.array([0, 0]).reshape(2,1)
-                df_dTs_nom = self.Ts * np.array([0, -1]).reshape(2,1) 
-                # dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - self.Ts
+                df_dTs_nom = self.Ts * np.array([0, -1 / self.J]).reshape(2,1) 
+                # dx2 = (self.km / self.J) * u - (self.gamma * self.k1 / self.J) * x1 - self.Ts / self.J
             else: #lockup
                 df_dkm_nom = self.km * np.array([0, 0]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
@@ -173,28 +182,28 @@ class FI_matrix(object):
                 df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
                 # dx2 = 0
         #when there is no clamp force, x1<=0
-        if x1 <= 0 and x2 > self.epsilon:
+        elif x1 <= 0 and x2 > self.epsilon:
             df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
             df_dfc_nom = self.fc * np.array([0, -1 / self.J]).reshape(2,1)
             df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
             df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
             # dx2 = (self.km / self.J) * u - (1 / self.J) * (self.fc + self.fv * x2)
-        if x1 <= 0 and x2 < -self.epsilon:
+        elif x1 <= 0 and x2 < -self.epsilon:
             df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
             df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
             df_dfc_nom = self.fc * np.array([0, 1 / self.J]).reshape(2,1)
             df_dfv_nom = self.fv * np.array([0, -x2 / self.J]).reshape(2,1)
             df_dTs_nom = self.Ts * np.array([0, 0]).reshape(2,1) 
             # dx2 = (self.km / self.J) * u - (1 / self.J) * (-self.fc + self.fv * x2)
-        if x1 <= 0 and abs(x2) <= self.epsilon:
-            if (self.km / self.J) * u > self.Ts: #overcome the maximum static friction
+        elif x1 <= 0 and abs(x2) <= self.epsilon:
+            if self.km * u > self.Ts: #overcome the maximum static friction
                 df_dkm_nom = self.km * np.array([0, 1 / self.J * u]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
                 df_dfc_nom = self.fc * np.array([0, 0]).reshape(2,1)
                 df_dfv_nom = self.fv * np.array([0, 0]).reshape(2,1)
-                df_dTs_nom = self.Ts * np.array([0, -1]).reshape(2,1) 
-                # dx2 = (self.km / self.J) * u - self.Ts
+                df_dTs_nom = self.Ts * np.array([0, -1 / self.J]).reshape(2,1) 
+                # dx2 = (self.km / self.J) * u - self.Ts / self.J
             else: #lockup
                 df_dkm_nom = self.km * np.array([0, 0]).reshape(2,1)
                 df_dk1_nom = self.k1 * np.array([0, 0]).reshape(2,1)
@@ -247,21 +256,29 @@ T = time.time()
 x = x0
 
 for k in range(350): #350 = 0.35s
-    u = 0.02*k + 0.02
+    u = 1 + 1 * math.sin(2*math.pi*k/200 - math.pi/2)
+    # u = 1.5
     dx = fi_matrix.f(x, u, theta)
     x = x + det_T * dx
     x0_values.append(x[0])
     x1_values.append(x[1])
     time_values.append((k+1) * det_T)
-    # J_f = fi_matrix.jacobian_f_tf(x, u)
+    # J_f_tf = fi_matrix.jacobian_f_tf(x, u)
     J_f = fi_matrix.jacobian_f(x, u)
     J_h = fi_matrix.jacobian_h(x)
-    # df_theta = fi_matrix.df_dtheta_tf(x, u)
+    # df_theta_tf = fi_matrix.df_dtheta_tf(x, u)
     df_theta = fi_matrix.df_dtheta(x, u)
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
     fi_info += fi_info_new
+
+    # if np.allclose(J_f, J_f_tf) == False:
+    #     print('wrong with Jacobian caculation')
+    # if np.allclose(df_theta, df_theta_tf) == False:
+    #     print('wrong with Jacobian_theta caculation')
+
+
     C = np.linalg.eigvals(fi_info)
     for i in range(len(C)):
         if C[i] < 0:
@@ -271,10 +288,10 @@ for k in range(350): #350 = 0.35s
 
 print(fi_info)
 print('det is', np.linalg.det(fi_info))
-# print(-np.log(np.linalg.det(fi_info)))
+print('log det is', -np.log(np.linalg.det(fi_info)))
 
 # save as csv
-filename = 'output_0.02k.csv'
+filename = 'output_3sin.csv'
 
 with open(filename, mode='w', newline='') as file:
     writer = csv.writer(file)
@@ -313,5 +330,5 @@ plt.legend()
 # plt.legend()
 
 plt.tight_layout()
-plt.savefig('0.02k_350.png')
+plt.savefig('3sin_350.png')
 plt.show()
