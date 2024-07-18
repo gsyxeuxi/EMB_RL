@@ -20,6 +20,7 @@ class FI_matrix(object):
         self.Ts = 1.2 * (self.fc + self.fv * self.epsilon) #Static friction torque
         self.dt = 0.001
         self.theta_tensor = tf.convert_to_tensor([self.km, self.k1, self.fc, self.fv, self.Ts])
+        # self.theta_tensor = np.array([self.km, self.k1, self.fc, self.fv, self.Ts])
 
     def f(self, x, u, theta):
         """
@@ -38,27 +39,27 @@ class FI_matrix(object):
         km, k1, fc, fv, Ts = theta
         dx1 = x2
         #when there is clamp force, x1>0
-        # if x1 > 0 and x2 > self.epsilon:
-        #     dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (fc + fv * x2)
-        # elif x1 > 0 and x2 < -self.epsilon:
-        #     dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (-fc + fv * x2)
-        # elif x1 > 0 and abs(x2) <= self.epsilon:
-        #     if (km / self.J) * u - (self.gamma * k1 / self.J) * x1 > Ts: #overcome the maximum static friction
-        #         dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - Ts
-        #     else: #lockup
-        #         dx2 = 0
-        # #when there is no clamp force, x1<=0
-        # elif x1 <= 0 and x2 > self.epsilon:
-        #     dx2 = (km / self.J) * u - (1 / self.J) * (fc + fv * x2)
-        # elif x1 <= 0 and x2 < -self.epsilon:
-        #     dx2 = (km / self.J) * u - (1 / self.J) * (-fc + fv * x2)
-        # elif x1 <= 0 and abs(x2) <= self.epsilon:
-        #     if (km / self.J) * u > Ts: #overcome the maximum static friction
-        #         dx2 = (km / self.J) * u - Ts
-        #     else: #lockup
-        #         dx2 = 0
-        # dx2 = (km / self.J) * u - (1 / self.J) * (-fc + fv * x2)
-        dx2=0
+        if x1 > 0 and x2 > self.epsilon:
+            dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (fc + fv * x2)
+        elif x1 > 0 and x2 < -self.epsilon:
+            dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (-fc + fv * x2)
+        elif x1 > 0 and abs(x2) <= self.epsilon:
+            if (km / self.J) * u - (self.gamma * k1 / self.J) * x1 > Ts: #overcome the maximum static friction
+                dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - Ts
+            else: #lockup
+                dx2 = 0
+        #when there is no clamp force, x1<=0
+        elif x1 <= 0 and x2 > self.epsilon:
+            dx2 = (km / self.J) * u - (1 / self.J) * (fc + fv * x2)
+        elif x1 <= 0 and x2 < -self.epsilon:
+            dx2 = (km / self.J) * u - (1 / self.J) * (-fc + fv * x2)
+        elif x1 <= 0 and abs(x2) <= self.epsilon:
+            if (km / self.J) * u > Ts: #overcome the maximum static friction
+                dx2 = (km / self.J) * u - Ts
+            else: #lockup
+                dx2 = 0
+        dx2 = (km / self.J) * u - (1 / self.J) * (-fc + fv * x2)
+        
         return tf.convert_to_tensor([dx1, dx2], dtype=tf.float32)
 
     def df_dtheta_tf(self, x, u):
@@ -87,6 +88,18 @@ class FI_matrix(object):
             f_x = self.f(x_tensor, u_tensor, theta_tensor)
         jacobian_matrix = np.array(tape.jacobian(f_x, x_tensor))
         return jacobian_matrix
+    
+    # this works 
+    def jacobian(self, x, u):
+        # x_tensor = tf.constant(x, dtype=tf.float32)
+        # u_tensor = tf.constant(u, dtype=tf.float32)
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(x)
+            tape.watch(self.theta_tensor)
+            f_x = self.f(x, u, self.theta_tensor)
+        jacobian_matrix = np.array(tape.jacobian(f_x, x))
+        jacobian_df_dtheta = tape.jacobian(f_x, self.theta_tensor, UnconnectedGradients.ZERO)
+        return jacobian_matrix, jacobian_df_dtheta
 
 test = FI_matrix()
 
@@ -94,7 +107,7 @@ x= [0.0, 0.0]
 det_T = 0.001
 theta = np.array([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)]) 
 for i in range(10):
-    u = 0.05-0.01*i
+    u = 0.05+0.01*i
     # print('u =', u)
     # u = 0.03 + 0.03 * math.sin(2*math.pi*k/200 - math.pi)
     dx = test.f(x, u, theta)
@@ -102,4 +115,9 @@ for i in range(10):
 
     df_theta = test.df_dtheta_tf(x, u)
     df_dx = test.jacobian_f_tf(x,u)
+    print(test.jacobian(x,u)[0])
+    print(df_dx)
+    print('*******************')
+    print(test.jacobian(x,u)[1])
     print(df_theta)
+    print('*******************')

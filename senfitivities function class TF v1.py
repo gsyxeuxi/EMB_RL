@@ -70,25 +70,15 @@ class FI_matrix(object):
         """
         return x[0]
     
-    @tf.function
     def jacobian_f(self, x, u):
         x_tensor = tf.constant(x, dtype=tf.float32)
+        u_tensor = tf.constant(u, dtype=tf.float32)
         theta_tensor = self.theta_tensor
         with tf.GradientTape() as tape:
             tape.watch(x_tensor)
-            f_x = self.f(x_tensor, u, theta_tensor)
+            f_x = self.f(x_tensor, u_tensor, theta_tensor)
         jacobian_matrix = np.array(tape.jacobian(f_x, x_tensor))
         return jacobian_matrix
-    
-    # def jacobian_f(self, x, u):
-    #     x_tensor = tf.constant(x, dtype=tf.float32)
-    #     u_tensor = tf.constant(u, dtype=tf.float32)
-    #     theta_tensor = self.theta_tensor
-    #     with tf.GradientTape() as tape:
-    #         tape.watch(x_tensor)
-    #         f_x = self.f(x_tensor, u_tensor, theta_tensor)
-    #     jacobian_matrix = np.array(tape.jacobian(f_x, x_tensor))
-    #     return jacobian_matrix
 
     def jacobian_h(self, x):
         """
@@ -100,39 +90,23 @@ class FI_matrix(object):
         dh_dx1 = 1
         dh_dx2 = 0
         return np.array([dh_dx1, dh_dx2])
-
-    # @tf.function
+    
     def df_dtheta(self, x, u):
         """
         Define the matrix of df_dtheta with each parameter
         dx/dt = f(x, u, theta)
         output: df/dtheta_norm = df/dtheta @ dtheta/dtheta_norm
         """
+        x_tensor = tf.constant(x, dtype=tf.float32)
+        u_tensor = tf.constant(u, dtype=tf.float32)
         theta_tensor = self.theta_tensor
         with tf.GradientTape() as tape:
             tape.watch(theta_tensor)
-            f_x = self.f(x, u, theta_tensor)
+            f_x = self.f(x_tensor, u_tensor, theta_tensor)
         jacobian_df_dtheta = tape.jacobian(f_x, theta_tensor, unconnected_gradients=UnconnectedGradients.ZERO)
         jacobian_dtheta_dtheta_norm = tf.linalg.diag([self.km, self.k1, self.fc, self.fv, self.Ts])
         jacobian_df_dtheta_norm = np.array(tf.matmul(jacobian_df_dtheta, jacobian_dtheta_dtheta_norm))
         return jacobian_df_dtheta_norm
-    
-    # def df_dtheta(self, x, u):
-    #     """
-    #     Define the matrix of df_dtheta with each parameter
-    #     dx/dt = f(x, u, theta)
-    #     output: df/dtheta_norm = df/dtheta @ dtheta/dtheta_norm
-    #     """
-    #     x_tensor = tf.constant(x, dtype=tf.float32)
-    #     u_tensor = tf.constant(u, dtype=tf.float32)
-    #     theta_tensor = self.theta_tensor
-    #     with tf.GradientTape() as tape:
-    #         tape.watch(theta_tensor)
-    #         f_x = self.f(x_tensor, u_tensor, theta_tensor)
-    #     jacobian_df_dtheta = tape.jacobian(f_x, theta_tensor, unconnected_gradients=UnconnectedGradients.ZERO)
-    #     jacobian_dtheta_dtheta_norm = tf.linalg.diag([self.km, self.k1, self.fc, self.fv, self.Ts])
-    #     jacobian_df_dtheta_norm = np.array(tf.matmul(jacobian_df_dtheta, jacobian_dtheta_dtheta_norm))
-    #     return jacobian_df_dtheta_norm
 
     def sensitivity_x(self, J_f, df_dtheta, chi):
         """
@@ -149,6 +123,8 @@ class FI_matrix(object):
         dh_dtheta(k) = J_h * chi(k)
         output: dh_dtheta(k)
         """
+        print(J_h)
+        print(chi)
         dh_dtheta = np.dot(J_h, chi)
         return dh_dtheta
     
