@@ -1,49 +1,63 @@
-import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
 
+class FI_matrix(object):
 
-J = 4.624e-06  # Moment of inertia
-km = 21.7e-03  # Motor constant
-gamma = 1.889e-05  # Proportional constant
-epsilon = 0.5
+    def __init__(self) -> None:
+        # Define parameters
+        self.J = 4.624e-06  # Moment of inertia
+        self.km = 21.7e-03  # Motor constant
+        self.gamma = 1.889e-05  # Proportional constant
+        self.k1 = 23.04  # Elasticity constant
+        self.fc = 10.37e-3  # Coulomb friction coefficient
+        self.epsilon = 0.5  # Zero velocity bound [rad/s]
+        self.fv = 2.16e-5  # Viscous friction coefficient
+        self.Ts = 1.0 * (self.fc + self.fv * self.epsilon) # Static friction torque
+        self.dt = 0.001
+        self.theta_tensor = tf.convert_to_tensor([self.km, self.k1, self.fc, self.fv, self.Ts], dtype=tf.float64)
 
-@tf.function
-def f(x, u, theta):
-    x1, x2 = tf.unstack(x)
-    dx1 = x1
-    km, k1, fc, fv, Ts = tf.unstack(theta)
-    def clamp_force_condition():
-        def moving():
-            return (km / J) * u - (gamma * k1 / J) * x1 - (1 / J) * (fc * tf.sign(x2) + fv * x2)
-        
-        def not_moving():
-            return tf.cond(
-                km * u - gamma * k1 * x1 > Ts,
-                lambda: (km / J) * u - (gamma * k1 / J) * x1 - Ts / J,
-                lambda: 0.0
-            )
-        return tf.cond(tf.abs(x2) > epsilon, moving, not_moving)
-        
-    def no_clamp_force_condition():
-        def moving():
-            return (km / J) * u - (1 / J) * (fc * tf.sign(x2) + fv * x2)
-        
-        def not_moving():
-            return tf.cond(
-                km * u > Ts,
-                lambda: (km / J) * u - Ts / J,
-                lambda: 0.0
-            )
-        return tf.cond(tf.abs(x2) > epsilon, moving, not_moving)
-    dx2 = tf.cond(x1 > 0, clamp_force_condition, no_clamp_force_condition)
-    return tf.convert_to_tensor([dx1, dx2], dtype=tf.float32)
+    def T_s(self, x2, theta):
+        km, k1, fc, fv, Ts = tf.unstack(theta)
 
-theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)], dtype=tf.float32)
-x = tf.constant([2.0,4.0], dtype=tf.float32)
-u = tf.constant(4.0, dtype=tf.float32)
+        Ts_1  = ((fc * tf.sign(x2) + fv * x2) / self.epsilon) * tf.minimum(tf.abs(x2), self.epsilon)
+        Ts_2 = fc * tf.sign(x2) * tf.minimum(tf.abs(x2), self.epsilon) + fv * x2
+        return Ts_1, Ts_2
 
-with tf.GradientTape() as tape:
-    tape.watch(x)
-    ys = f(x, u, theta)
-    grad = tape.jacobian(ys, x)
-print(grad)
+# Instantiate the FI_matrix class
+fi_matrix = FI_matrix()
+theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)], dtype=tf.float64)
+# Generate x2 values
+x2_values = np.linspace(-10, 10, 500)
+
+# Convert x2_values to TensorFlow tensor
+x2_tensor = tf.convert_to_tensor(x2_values, dtype=tf.float64)
+
+# Calculate Ts_1 and Ts_2
+Ts_1, Ts_2 = fi_matrix.T_s(x2_tensor, theta)
+
+# Convert Ts_1 and Ts_2 to NumPy arrays for plotting
+Ts_1_values = Ts_1.numpy()
+Ts_2_values = Ts_2.numpy()
+
+# Plot Ts_1 and Ts_2
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.plot(x2_values, Ts_1_values, label='Ts_1')
+plt.xlabel('x2')
+plt.ylabel('Ts_1')
+plt.title('Ts_1 vs x2')
+plt.grid(True)
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(x2_values, Ts_2_values, label='Ts_2')
+plt.xlabel('x2')
+plt.ylabel('Ts_2')
+plt.title('Ts_2 vs x2')
+plt.grid(True)
+plt.legend()
+
+plt.tight_layout()
+plt.show()

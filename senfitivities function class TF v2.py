@@ -25,7 +25,7 @@ class FI_matrix(object):
         self.fv = 2.16e-5  # Viscous friction coefficient
         self.Ts = 1.2 * (self.fc + self.fv * self.epsilon) # Static friction torque
         self.dt = 0.001
-        self.theta_tensor = tf.convert_to_tensor([self.km, self.k1, self.fc, self.fv, self.Ts])
+        self.theta_tensor = tf.convert_to_tensor([self.km, self.k1, self.fc, self.fv, self.Ts], dtype=tf.float64)
 
     @tf.function
     def f(self, x, u, theta):
@@ -43,23 +43,6 @@ class FI_matrix(object):
         x1, x2 = tf.unstack(x)
         km, k1, fc, fv, Ts = tf.unstack(theta)
         dx1 = x2
-        # #when there is clamp force, x1>0
-        # if x1 > 0 and tf.abs(x2) > self.epsilon:
-        #     dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (fc * tf.sign(x2) + fv * x2)
-        # elif x1 > 0 and tf.abs(x2) <= self.epsilon:
-        #     if km * u - self.gamma * k1 * x1 > Ts: #overcome the maximum static friction
-        #         dx2 = (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - Ts / self.J
-        #     else: #lockup
-        #         dx2 = 0.0
-        # #when there is no clamp force, x1<=0
-        # elif x1 <= 0 and tf.abs(x2) > self.epsilon:
-        #     dx2 = (km / self.J) * u - (1 / self.J) * (fc * tf.sign(x2) + fv * x2)
-        # elif x1 <= 0 and tf.abs(x2) <= self.epsilon:
-        #     if km * u > Ts: #overcome the maximum static friction
-        #         dx2 = (km / self.J) * u - Ts / self.J
-        #     else: #lockup
-        #         dx2 = 0.0
-
         def clamp_force_condition():
             def moving():
                 return (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - (1 / self.J) * (fc * tf.sign(x2) + fv * x2)
@@ -68,7 +51,7 @@ class FI_matrix(object):
                 return tf.cond(
                     km * u - self.gamma * k1 * x1 > Ts,
                     lambda: (km / self.J) * u - (self.gamma * k1 / self.J) * x1 - Ts / self.J,
-                    lambda: 0.0
+                    lambda: tf.constant(0.0, dtype=tf.float64)
                 )
             return tf.cond(tf.abs(x2) > self.epsilon, moving, not_moving)
         
@@ -80,12 +63,12 @@ class FI_matrix(object):
                 return tf.cond(
                     km * u > Ts,
                     lambda: (km / self.J) * u - Ts / self.J,
-                    lambda: 0.0
+                    lambda: tf.constant(0.0, dtype=tf.float64)
                 )
             return tf.cond(tf.abs(x2) > self.epsilon, moving, not_moving)
         
         dx2 = tf.cond(x1 > 0, clamp_force_condition, no_clamp_force_condition)
-        return tf.convert_to_tensor([dx1, dx2], dtype=tf.float32)
+        return tf.convert_to_tensor([dx1, dx2], dtype=tf.float64)
 
     def h(self, x):
         """
@@ -105,8 +88,9 @@ class FI_matrix(object):
         x1, x2 = x
         dh_dx1 = 1
         dh_dx2 = 0
-        return tf.convert_to_tensor([[dh_dx1, dh_dx2]], dtype=tf.float32)
+        return tf.convert_to_tensor([[dh_dx1, dh_dx2]], dtype=tf.float64)
     
+    @tf.function
     def jacobian(self, x, u):
         """
         Define the Jacobian matrix of function f, J_f,
@@ -116,11 +100,11 @@ class FI_matrix(object):
         """
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(x)
-            # tape.watch(self.theta_tensor)
+            tape.watch(self.theta_tensor)
             f_x = self.f(x, u, self.theta_tensor)
         jacobian_df_dx = tape.jacobian(f_x, x)
         jacobian_df_dtheta = tape.jacobian(f_x, self.theta_tensor, UnconnectedGradients.ZERO)
-        jacobian_dtheta_dtheta_norm = tf.linalg.diag([self.km, self.k1, self.fc, self.fv, self.Ts])
+        jacobian_dtheta_dtheta_norm = tf.linalg.diag(np.array(self.theta_tensor))
         jacobian_df_dtheta_norm = tf.matmul(jacobian_df_dtheta, jacobian_dtheta_dtheta_norm)
         return jacobian_df_dx, jacobian_df_dtheta_norm
 
@@ -149,17 +133,16 @@ class FI_matrix(object):
         output: fi_info
         """
         return tf.matmul(tf.multiply(dh_dtheta, 1/R), dh_dtheta, True)
+        # return np.dot(np.dot(np.array(dh_dtheta).reshape(-1,1), 1/R), np.array(dh_dtheta).reshape(1,-1))
 
 # Initial state
-# x_0 = np.array([0.0, 0.0])
-x_0 = tf.constant([0.0, 0.0], dtype=tf.float32)
+x_0 = tf.constant([0.0, 0.0], dtype=tf.float64)
 
-chi = tf.convert_to_tensor(np.zeros((2,5)), dtype=tf.float32)
-fi_info = tf.convert_to_tensor(np.zeros((5,5)), dtype=tf.float32)
-fi_info_10 = tf.convert_to_tensor(np.zeros((5,5)), dtype=tf.float32)
+chi = tf.convert_to_tensor(np.zeros((2,5)), dtype=tf.float64)
+fi_info = tf.convert_to_tensor(np.zeros((5,5)), dtype=tf.float64)
+fi_info_10 = tf.convert_to_tensor(np.zeros((5,5)), dtype=tf.float64)
 det_T = 0.001
-# theta = np.array([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)]) #[self.km, self.k1, self.fc, self.fv, self.Ts]
-theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)], dtype=tf.float32)
+theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv, self.Ts]
 
 x0_values = []
 x1_values = []
@@ -174,19 +157,18 @@ sensitivity_y = []
 fi_matrix = FI_matrix()
 T = time.time()
 x = x_0
-pi = tf.constant(math.pi, dtype=tf.float32)
+pi = tf.constant(math.pi, dtype=tf.float64)
+t = time.time()
 
 for k in range(350): #350 = 0.35s
     t = time.time()
-    u = tf.constant(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float32)
+    u = tf.constant(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float64)
     dx = fi_matrix.f(x, u, theta)
-    print("111", time.time()-t)
     x = x + det_T * dx
     x0_values.append(x[0])
     x1_values.append(x[1])
     time_values.append((k+1) * det_T)
     jacobian = fi_matrix.jacobian(x, u)
-    print(time.time()-t)
     J_f = jacobian[0]
     J_h = fi_matrix.jacobian_h(x)
     df_theta = jacobian[1]
@@ -194,8 +176,6 @@ for k in range(350): #350 = 0.35s
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
 
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
-
-    fi_info_10 += fi_info_new
 
     # det_previous = det(fi_info)
     # fi_info += fi_info_new
@@ -205,21 +185,22 @@ for k in range(350): #350 = 0.35s
     # reward_final = det(fi_info)
 
     fi_info += fi_info_new
-    print(time.time()-t)
-    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-    # if k % 35 == 0:
-    #     fi_info_10 = fi_info_new
-    # if k % 35 == 34:
-    #     det_fi_10 = np.linalg.det(fi_info_10)
-    #     log_dets_10.append(-np.log(det_fi_10))
-    #     det_fi_values_10.append(det_fi_10)
-    #     time_values_10.append((k+1) * det_T)
 
-    # det_fi = np.linalg.det(fi_info)
-    # det_fi_values.append(det_fi)
-    # log_dets.append(-np.log(det_fi))
-    # sensitivity_y.append(dh_theta)
+    if k % 70 == 0:
+        print(fi_info_10)
+        det_fi_10 = tf.linalg.det(fi_info_10)
+        log_dets_10.append(-tf.math.log(det_fi_10))
+        det_fi_values_10.append(det_fi_10)
+        time_values_10.append((k+1) * det_T)
+        fi_info_10 = fi_info_new
     
+    else:
+        fi_info_10 += fi_info_new
+    det_fi = tf.linalg.det(fi_info)
+    det_fi_values.append(det_fi)
+    log_dets.append(-tf.math.log(det_fi))
+    sensitivity_y.append(dh_theta)
+    print(time.time()-t)
 print('det is', np.linalg.det(fi_info))
 print('log det is', -np.log(np.linalg.det(fi_info)))
 
@@ -282,5 +263,5 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('1sinus_v2.png')
 plt.show()   
-
+print("111", time.time()-t)
 print('Finished')
