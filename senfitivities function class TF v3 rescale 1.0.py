@@ -7,8 +7,6 @@ import csv
 import math
 
 """
-V3: simplify the model with minmax funciton, no tf.cond(), no T_s
-
 I_m_cont = 4.87[A]
 I_m_max = 6[A]
 x1_max =
@@ -107,20 +105,32 @@ class FI_matrix(object):
         dh_dtheta = tf.matmul(J_h, chi)
         return dh_dtheta
     
-    def fisher_info_matrix(self, dh_dtheta, R=0.05):
+    def fisher_info_matrix(self, dh_dtheta, R=1):
         """
         Define the fisher infomation matrix M
         dh_dtheta(k) = J_h * chi(k)
         output: fi_info
         """
-        return tf.matmul(dh_dtheta, dh_dtheta, True) * (1/R)
+        return tf.matmul(tf.multiply(dh_dtheta, 1/R), dh_dtheta, True)
+        # return np.dot(np.dot(np.array(dh_dtheta).reshape(-1,1), 1/R), np.array(dh_dtheta).reshape(1,-1))
+
+    def PSD_test(self, x):
+        x = np.array(x)
+        y = (x + np.transpose(x)) / 2
+        if np.array_equal(x, y) == False:
+            print('not symmetrie matrix')
+
+        try:
+            np.linalg.cholesky(x)
+            return True
+        except np.linalg.LinAlgError:
+            return False
 
 # Initial state
 x_0 = tf.Variable([0.0, 0.0], dtype=tf.float64)
 
 chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
 fi_info = tf.convert_to_tensor(np.eye(4) * 1e-6, dtype=tf.float64)
-# fi_info = tf.convert_to_tensor(np.zeros((4,4)), dtype=tf.float64)
 det_T = 0.001
 theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv]
 
@@ -129,7 +139,7 @@ x1_values = []
 time_values = []
 det_fi_values = []
 reward_values = []
-log_dets = []
+log_det_values = []
 # log_dets_10 = []
 sensitivity_y = []
 
@@ -138,15 +148,48 @@ T = time.time()
 x = x_0
 pi = tf.constant(math.pi, dtype=tf.float64)
 t = time.time()
-det_previous = tf.linalg.det(fi_info)
-print('det = ', det_previous)
-total_reward_log = 0
 
-for k in range(3): #350 = 0.35s
-    #case1: sinus input
-    u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
+scale_factor = 1e-6
+fi_info_scale = fi_info * scale_factor
+
+det_previous = tf.linalg.det(fi_info)
+log_det_previous = tf.math.log(det_previous)
+det_previous_scale = tf.linalg.det(fi_info_scale)
+log_det_previous_scale = tf.math.log(det_previous_scale)
+
+total_reward = log_det_previous
+total_reward_scale = log_det_previous
+
+# calculate the determinat by Laplace expansion
+def minor(matrix, i, j):
+    """
+    Returns the minor of the matrix excluding the i-th row and j-th column.
+    """
+    minor = np.delete(matrix, i, axis=0)
+    minor = np.delete(minor, j, axis=1)
+    return minor
+
+def determinant(matrix):
+    """
+    Recursively calculates the determinant of a matrix.
+    """
+    # Base case for 2x2 matrix
+    if matrix.shape == (2, 2):
+        return matrix[0, 0] * matrix[1, 1] - matrix[0, 1] * matrix[1, 0]
+    
+    det = 0
+    for col in range(matrix.shape[1]):
+        det += ((-1) ** col) * matrix[0, col] * determinant(minor(matrix, 0, col))
+    return det
+
+
+for k in range(68): #350 = 0.35s
+    # print('step', k+1, '-----------------------------------------------')
+    
+    # #case1: sinus input
+    # u = tf.Variable(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float64)
     # case2: slope
-    # u = tf.Variable(2/350 * k, dtype=tf.float64)
+    u = tf.Variable(1+2/350 * k, dtype=tf.float64)
     # # case3: one sinus peroide
     # if k <= 200:
     #     u = tf.Variable(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float64)
@@ -163,24 +206,53 @@ for k in range(3): #350 = 0.35s
     df_theta = jacobian[1]
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
+    sensitivity_y.append(dh_theta)
+
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
+    fi_info_new_scale = fi_info_new * scale_factor
     fi_info += fi_info_new
+    fi_info_scale += fi_info_new_scale
+    fi_matrix.PSD_test(fi_info)
+    fi_matrix.PSD_test(fi_info_scale)
     det_fi = tf.linalg.det(fi_info)
     det_fi_values.append(det_fi)
-    log_dets.append(-tf.math.log(det_fi))
-    sensitivity_y.append(dh_theta)
-    step_reward = det_fi - det_previous
-    if k > -1:
-        step_reward_log = tf.math.log(det_fi) - tf.math.log(det_previous)
-        print(step_reward_log)
-        total_reward_log += step_reward_log
+    # np.linalg.cholesky(fi_info)
+    log_det = tf.math.log(det_fi)
+    log_det_values.append(log_det)
 
+    det_fi_scale = tf.linalg.det(fi_info_scale)
+    log_det_scale = tf.math.log(det_fi_scale)
+    
+  
+    if k >= 65:
+        # print(np.linalg.eigvals(fi_info))
+        b = np.linalg.eigvalsh(fi_info)
+        print(b)
+        print(b[0]*b[1]*b[2]*b[3])
+        # print(np.linalg.slogdet(fi_info))
+        print(det_fi)
+
+    step_reward = log_det - log_det_previous
     reward_values.append(step_reward)
-    det_previous = det_fi
+    total_reward = total_reward + step_reward
+
+    step_reward_scale = log_det_scale - log_det_previous_scale
+    total_reward_scale = total_reward_scale + step_reward_scale
+    # scale_factor = tf.constant((1/det_fi)**(1/4), dtype=tf.float64)
+
+    log_det_previous = log_det
+    log_det_previous_scale = log_det_scale
+
+    # print('step reward is:', step_reward)
+    # print('step reward scale is:', step_reward_scale)
 
 print('det is', np.linalg.det(fi_info))
-print('log det is', -np.log(np.linalg.det(fi_info)))
-print(total_reward_log)
+print('log det is', np.log(np.linalg.det(fi_info)))
+print('det sacle is', np.linalg.det(fi_info_scale))
+print('log det scale is', np.log(np.linalg.det(fi_info_scale)))
+print("total_reward", total_reward)
+print("total_reward_scale", total_reward_scale)
+
 
 # save as csv
 # filename = 'output_0.5slop_v3.csv'
@@ -223,7 +295,7 @@ plt.title('Step rewards vs Time')
 plt.legend()
 
 plt.subplot(2, 3, 3)
-plt.plot(time_values, log_dets, label='log_det')
+plt.plot(time_values, log_det_values, label='log_det')
 plt.xlabel('Time (s)')
 plt.ylabel('log_det')
 plt.title('log_det vs Time')

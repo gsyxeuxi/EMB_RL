@@ -105,16 +105,18 @@ class FI_matrix(object):
         dh_dtheta = tf.matmul(J_h, chi)
         return dh_dtheta
     
-    def fisher_info_matrix(self, dh_dtheta, R=1):
+    def fisher_info_matrix(self, dh_dtheta, R=0.05):
         """
         Define the fisher infomation matrix M
-        dh_dtheta(k) = J_h * chi(k)
+        M = dh_dtheta.T * (1/R) * dh_dtheta
         output: fi_info
         """
-        return tf.matmul(tf.multiply(dh_dtheta, 1/R), dh_dtheta, True)
-        # return np.dot(np.dot(np.array(dh_dtheta).reshape(-1,1), 1/R), np.array(dh_dtheta).reshape(1,-1))
+        return tf.matmul(dh_dtheta, dh_dtheta, True) * (1/R)
 
-    def PSD_test(self, x):
+    def symmetrie_test(self, x):
+        """
+        Test if a matrix is symmetrie
+        """
         x = np.array(x)
         y = (x + np.transpose(x)) / 2
         if np.array_equal(x, y) == False:
@@ -140,7 +142,6 @@ time_values = []
 det_fi_values = []
 reward_values = []
 log_det_values = []
-# log_dets_10 = []
 sensitivity_y = []
 
 fi_matrix = FI_matrix()
@@ -149,47 +150,26 @@ x = x_0
 pi = tf.constant(math.pi, dtype=tf.float64)
 t = time.time()
 
-scale_factor = 1e-6
+scale_factor = 1
+scale_factor_previous = 1
 fi_info_scale = fi_info * scale_factor
-
 det_previous = tf.linalg.det(fi_info)
 log_det_previous = tf.math.log(det_previous)
 det_previous_scale = tf.linalg.det(fi_info_scale)
 log_det_previous_scale = tf.math.log(det_previous_scale)
-
 total_reward = log_det_previous
 total_reward_scale = log_det_previous
+# total_reward = 0
+# total_reward_scale = 0
 
-# calculate the determinat by Laplace expansion
-def minor(matrix, i, j):
-    """
-    Returns the minor of the matrix excluding the i-th row and j-th column.
-    """
-    minor = np.delete(matrix, i, axis=0)
-    minor = np.delete(minor, j, axis=1)
-    return minor
-
-def determinant(matrix):
-    """
-    Recursively calculates the determinant of a matrix.
-    """
-    # Base case for 2x2 matrix
-    if matrix.shape == (2, 2):
-        return matrix[0, 0] * matrix[1, 1] - matrix[0, 1] * matrix[1, 0]
-    
-    det = 0
-    for col in range(matrix.shape[1]):
-        det += ((-1) ** col) * matrix[0, col] * determinant(minor(matrix, 0, col))
-    return det
-
-
+'''
+start the simulation
+'''
 for k in range(350): #350 = 0.35s
-    # print('step', k+1, '-----------------------------------------------')
-    
-    # #case1: sinus input
-    # u = tf.Variable(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float64)
-    # case2: slope
-    u = tf.Variable(3/350 * k, dtype=tf.float64)
+    #case1: sinus input
+    u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
+    # # case2: slope
+    # u = tf.Variable(1+2/350 * k, dtype=tf.float64)
     # # case3: one sinus peroide
     # if k <= 200:
     #     u = tf.Variable(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float64)
@@ -207,38 +187,40 @@ for k in range(350): #350 = 0.35s
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
     sensitivity_y.append(dh_theta)
-
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
     fi_info_new_scale = fi_info_new * scale_factor
     fi_info += fi_info_new
     fi_info_scale += fi_info_new_scale
-    fi_matrix.PSD_test(fi_info)
-    fi_matrix.PSD_test(fi_info_scale)
-
-    det_fi = tf.linalg.det(fi_info)
-
-    det_fi_values.append(det_fi)
-    np.linalg.cholesky(fi_info)
-    log_det = tf.math.log(det_fi)
+    fi_matrix.symmetrie_test(fi_info)
+    fi_matrix.symmetrie_test(fi_info_scale)
+    log_det_sign, log_det = np.linalg.slogdet(fi_info)
+    if log_det_sign < 0:
+        print('not PSD FI matrix')
+        break
     log_det_values.append(log_det)
-
     det_fi_scale = tf.linalg.det(fi_info_scale)
     log_det_scale = tf.math.log(det_fi_scale)
-
+    
     step_reward = log_det - log_det_previous
-    reward_values.append(step_reward)
-    total_reward = total_reward + step_reward
-
     step_reward_scale = log_det_scale - log_det_previous_scale
+    total_reward = total_reward + step_reward
     total_reward_scale = total_reward_scale + step_reward_scale
-    # scale_factor = tf.constant((1/det_fi)**(1/4), dtype=tf.float64)
-
+    reward_values.append(step_reward_scale)
     log_det_previous = log_det
-    log_det_previous_scale = log_det_scale
-
+    
+    scale_factor = (1 / det_fi_scale) ** (1/4)
+    fi_info_scale = (fi_info_scale / scale_factor_previous) * scale_factor # = fi_info * scale_factor
+    fi_info_previous_scale = fi_info_scale
+    log_det_previous_scale = np.linalg.slogdet(fi_info_previous_scale)[1]
+    scale_factor_previous = scale_factor
     # print('step reward is:', step_reward)
     # print('step reward scale is:', step_reward_scale)
 
+    if k % 50 == 0:
+        print('step reward is:', step_reward)
+        print('step reward scale is:', step_reward_scale)
+
+# print('log det ini', tf.math.log(tf.constant(1e-16, dtype=tf.float64)))
 print('det is', np.linalg.det(fi_info))
 print('log det is', np.log(np.linalg.det(fi_info)))
 print('det sacle is', np.linalg.det(fi_info_scale))
@@ -246,63 +228,45 @@ print('log det scale is', np.log(np.linalg.det(fi_info_scale)))
 print("total_reward", total_reward)
 print("total_reward_scale", total_reward_scale)
 
-
 # save as csv
 # filename = 'output_0.5slop_v3.csv'
-
 # with open(filename, mode='w', newline='') as file:
 #     writer = csv.writer(file)
 #     writer.writerow(['x0', 'x1', 'time', 'det_fi', 'log_det', 'sensitivity_y'])
 #     for x0, x1, time_value, det_fi_value, reward_value, log_det, dh_theta in zip(x0_values, x1_values, time_values, det_fi_values, reward_values, log_dets, sensitivity_y):
 #         writer.writerow([x0, x1, time_value, det_fi_value, reward_value, log_det, dh_theta])
 
-
-
 # plt function
-plt.subplot(2, 3, 1)
+plt.subplot(2, 2, 1)
 plt.plot(time_values, x0_values, label='x0')
 plt.xlabel('Time (s)')
 plt.ylabel('x0')
 plt.title('x0 vs Time')
 plt.legend()
 
-plt.subplot(2, 3, 4)
+plt.subplot(2, 2, 3)
 plt.plot(time_values, x1_values, label='x1')
 plt.xlabel('Time (s)')
 plt.ylabel('x1')
 plt.title('x1 vs Time')
 plt.legend()
 
-plt.subplot(2, 3, 2)
-plt.plot(time_values, det_fi_values, label='det')
-plt.xlabel('Time (s)')
-plt.ylabel('det')
-plt.title('det vs Time')
-plt.legend()
-
-plt.subplot(2, 3, 5)
-plt.plot(time_values, reward_values, label='det_10')
+plt.subplot(2, 2, 4)
+plt.plot(time_values, reward_values, label='step rewards')
 plt.xlabel('Time (s)')
 plt.ylabel('Step rewards')
 plt.title('Step rewards vs Time')
 plt.legend()
 
-plt.subplot(2, 3, 3)
-plt.plot(time_values, log_det_values, label='log_det')
+plt.subplot(2, 2, 2)
+plt.plot(time_values, log_det_values, label='total rewards')
 plt.xlabel('Time (s)')
-plt.ylabel('log_det')
-plt.title('log_det vs Time')
+plt.ylabel('toatl rewards')
+plt.title('total rewards vs Time')
 plt.legend()
 
-# plt.subplot(2, 3, 6)
-# plt.plot(time_values_10, log_dets_10, label='log_det_10')
-# plt.xlabel('Time (s)')
-# plt.ylabel('log_det_10')
-# plt.title('log_det_10 vs Time')
-# plt.legend()
-
 plt.tight_layout()
-# plt.savefig('0.5slop_v3.png')
+plt.savefig('2sin10-6.jpeg')
 plt.show()   
 print("Running time is:", time.time()-t)
 print('Finished')

@@ -7,6 +7,8 @@ import csv
 import math
 
 """
+V2: Write f() function using tf.cond(), dead zone model still in use
+
 I_m_cont = 4.87[A]
 I_m_max = 6[A]
 x1_max =
