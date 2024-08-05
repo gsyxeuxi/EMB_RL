@@ -133,35 +133,19 @@ x_0 = tf.Variable([0.0, 0.0], dtype=tf.float64)
 
 chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
 fi_info = tf.convert_to_tensor(np.eye(4) * 1e-6, dtype=tf.float64)
-fi_info_0 = tf.convert_to_tensor(np.zeros((4,4)), dtype=tf.float64) # if the FI matrix is not initialized
-det_T = 0.001
+det_T = 0.001 #Time step
 theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv]
 
-x0_values = []
-x1_values = []
-time_values = []
-reward_values = []
-log_det_values = []
-sensitivity_y = []
-
 fi_matrix = FI_matrix()
-T = time.time()
 x = x_0
 pi = tf.constant(math.pi, dtype=tf.float64)
-t = time.time()
-
 scale_factor = 1
 scale_factor_previous = 1
+det_init = tf.linalg.det(fi_info)
 fi_info_scale = fi_info * scale_factor
-det_previous = tf.linalg.det(fi_info)
-det_init = det_previous
-log_det_previous = tf.math.log(det_previous)
 det_previous_scale = tf.linalg.det(fi_info_scale)
 log_det_previous_scale = tf.math.log(det_previous_scale)
-total_reward = log_det_previous
 total_reward_scale = log_det_previous_scale
-# total_reward = 0
-# total_reward_scale = 0
 
 '''
 start the simulation
@@ -169,110 +153,29 @@ start the simulation
 for k in range(350): #350 = 0.35s
     # case1: sinus input
     u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
-    # # # case2: slope
-    # if k == 0:
-    #     u = 2
-    # else:
-    #     u = tf.Variable(2 - 2/350 * k, dtype=tf.float64)
-    # # case3: one sinus peroide
-    # if k <= 200:
-    #     u = tf.Variable(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float64)
-    # else:
-    #     u = tf.constant(0.0, dtype=tf.float64)
+    
     dx = fi_matrix.f(x, u, theta)
     x = x + det_T * dx
-    x0_values.append(x[0])
-    x1_values.append(x[1])
-    time_values.append((k+1) * det_T)
     jacobian = fi_matrix.jacobian(x, u)
     J_f = jacobian[0]
     J_h = fi_matrix.jacobian_h(x)
     df_theta = jacobian[1]
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
-    sensitivity_y.append(dh_theta)
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
     fi_info_new_scale = fi_info_new * scale_factor
-    fi_info += fi_info_new
-    fi_info_0 += fi_info_new
     fi_info_scale += fi_info_new_scale
-    fi_matrix.symmetrie_test(fi_info)
     fi_matrix.symmetrie_test(fi_info_scale)
-    log_det_sign, log_det = np.linalg.slogdet(fi_info)
-    if log_det_sign < 0:
-        print('not PSD FI matrix')
-        print(k)
-        break
-    log_det_values.append(log_det)
     det_fi_scale = tf.linalg.det(fi_info_scale)
     log_det_scale = tf.math.log(det_fi_scale)
-    
-    step_reward = log_det - log_det_previous
     step_reward_scale = log_det_scale - log_det_previous_scale
-    total_reward = total_reward + step_reward
     total_reward_scale = total_reward_scale + step_reward_scale
-    reward_values.append(step_reward_scale)
-    log_det_previous = log_det
-    
     scale_factor = (det_init / det_fi_scale) ** (1/4)
     fi_info_scale = (fi_info_scale / scale_factor_previous) * scale_factor # = fi_info * scale_factor
     fi_info_previous_scale = fi_info_scale
     log_det_previous_scale = np.linalg.slogdet(fi_info_previous_scale)[1]
     scale_factor_previous = scale_factor
-    # print('step reward is:', step_reward)
-    # print('step reward scale is:', step_reward_scale)
 
-    if k % 50 == 0:
-        # print('step reward is:', step_reward)
-        # print('step reward scale is:', step_reward_scale)
-        print(total_reward)
-print('det is', np.linalg.det(fi_info))
-print('log det is', np.log(np.linalg.det(fi_info)))
 print('det sacle is', np.linalg.det(fi_info_scale))
 print('log det scale is', np.log(np.linalg.det(fi_info_scale)))
-print("total_reward", total_reward)
 print("total_reward_scale", total_reward_scale)
-print("total_reward0", np.linalg.slogdet(fi_info_0)[1])
-
-# save as csv
-# filename = 'rescale_3_2_350k.csv'
-# with open(filename, mode='w', newline='') as file:
-#     writer = csv.writer(file)
-#     writer.writerow(['x0', 'x1', 'time', 'log_det', 'setp_reward', 'sensitivity_y'])
-#     for x0, x1, time_value, log_det_value, reward_value, dh_theta in zip(x0_values, x1_values, time_values, log_det_values, reward_values, sensitivity_y):
-#         writer.writerow([x0, x1, time_value, log_det_value, reward_value, dh_theta])
-
-# plt function
-plt.subplot(2, 2, 1)
-plt.plot(time_values, x0_values, label='x0')
-plt.xlabel('Time (s)')
-plt.ylabel('x0')
-plt.title('x0 vs Time')
-plt.legend()
-
-plt.subplot(2, 2, 3)
-plt.plot(time_values, x1_values, label='x1')
-plt.xlabel('Time (s)')
-plt.ylabel('x1')
-plt.title('x1 vs Time')
-plt.legend()
-
-plt.subplot(2, 2, 4)
-plt.plot(time_values, reward_values, label='step rewards')
-plt.xlabel('Time (s)')
-plt.ylabel('Step rewards')
-plt.title('Step rewards vs Time')
-plt.legend()
-
-plt.subplot(2, 2, 2)
-plt.plot(time_values, log_det_values, label='total rewards')
-plt.xlabel('Time (s)')
-plt.ylabel('toatl rewards')
-plt.title('total rewards vs Time')
-plt.legend()
-
-plt.tight_layout()
-# plt.savefig('2sin10-6.jpeg')
-plt.show()   
-print("Running time is:", time.time()-t)
-print('Finished')
