@@ -150,7 +150,7 @@ total_reward_scale = log_det_previous_scale
 '''
 start the simulation
 '''
-for k in range(350): #350 = 0.35s
+for k in range(5): #350 = 0.35s
     # case1: sinus input
     u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
     
