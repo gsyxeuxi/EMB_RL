@@ -184,6 +184,7 @@ for k in range(5): #350 = 0.35s
     det_fi_scale = tf.linalg.det(fi_info_scale)
     log_det_scale = tf.math.log(det_fi_scale)
     step_reward_scale = log_det_scale - log_det_previous_scale
+    print(step_reward_scale)
     total_reward_scale = total_reward_scale + step_reward_scale
     # calculate for the next step
     scale_factor = (det_init / det_fi_scale) ** (1/4)

@@ -66,7 +66,7 @@ class EMB_All_info_Env(gym.Env):
         self.chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
 
         self.scale_factor = 1
-        scale_factor_previous = 1
+        self.scale_factor_previous = 1
         fi_info = tf.convert_to_tensor(np.eye(4) * 1e-6, dtype=tf.float64)
         self.det_init = tf.linalg.det(fi_info)
         self.fi_info_scale = fi_info * self.scale_factor
@@ -101,8 +101,9 @@ class EMB_All_info_Env(gym.Env):
         s1_new, s2_new, s3_new, s4_new = np.array(dh_theta)[0][:]
 
         fi_info_new = self.fi_matrix.fisher_info_matrix(dh_theta)
+        self.fi_info += fi_info_new
         fi_info_new_scale = fi_info_new * self.scale_factor
-        self.fi_info_scale += fi_info_new_scale
+        self.fi_info_scale = self.fi_info_previous_scale + fi_info_new_scale
 
         self.fi_matrix.symmetrie_test(self.fi_info_scale)
         det_fi_scale = tf.linalg.det(self.fi_info_scale)
@@ -110,9 +111,9 @@ class EMB_All_info_Env(gym.Env):
         step_reward_scale = log_det_scale - self.log_det_previous_scale
         # total_reward_scale = total_reward_scale + step_reward_scale
         self.scale_factor = (self.det_init / det_fi_scale) ** (1/4)
-        fi_info_previous_scale = (self.fi_info_scale / scale_factor_previous) * self.scale_factor
-        self.log_det_previous_scale = np.linalg.slogdet(fi_info_previous_scale)[1]
-        scale_factor_previous = self.scale_factor
+        self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
+        self.log_det_previous_scale = np.linalg.slogdet(self.fi_info_previous_scale)[1]
+        self.scale_factor_previous = self.scale_factor
 
         self.count += 1
         k_new = k + 1
@@ -121,7 +122,7 @@ class EMB_All_info_Env(gym.Env):
         # ************calculate the rewards************
         self.reward = step_reward_scale
 
-        return self._get_obs(), step_reward_scale, done
+        return self._get_obs(), step_reward_scale, done, {}
 
     def render(self, mode='human'):
         return None
@@ -132,6 +133,13 @@ class EMB_All_info_Env(gym.Env):
 
 env = EMB_All_info_Env()
 env.reset()
+for k in range(5):
+    u = -1/3
+    next_state, reward, done, _ = env.step(u)
+    print(reward)
+
+env.reset()
+print("*******************")
 for k in range(5):
     u = -1/3
     next_state, reward, done, _ = env.step(u)
