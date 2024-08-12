@@ -182,6 +182,7 @@ for k in range(5): #350 = 0.35s
     #     u = tf.constant(0.0, dtype=tf.float64)
     dx = fi_matrix.f(x, u, theta)
     x = x + det_T * dx
+    print(x)
     x0_values.append(x[0])
     x1_values.append(x[1])
     time_values.append((k+1) * det_T)
@@ -195,6 +196,7 @@ for k in range(5): #350 = 0.35s
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
     fi_info_new_scale = fi_info_new * scale_factor
     fi_info += fi_info_new
+    print(fi_info)
     fi_info_0 += fi_info_new
     fi_info_scale += fi_info_new_scale
     fi_matrix.symmetrie_test(fi_info)
@@ -219,8 +221,8 @@ for k in range(5): #350 = 0.35s
     fi_info_previous_scale = fi_info_scale
     log_det_previous_scale = np.linalg.slogdet(fi_info_previous_scale)[1]
     scale_factor_previous = scale_factor
-    # print('step reward is:', step_reward)
-    # print('step reward scale is:', step_reward_scale)
+    print('step reward is:', step_reward)
+    print('step reward scale is:', step_reward_scale)
 
     if k % 50 == 0:
         # print('step reward is:', step_reward)
