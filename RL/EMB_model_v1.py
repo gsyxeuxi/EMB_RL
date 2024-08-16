@@ -141,59 +141,59 @@ class FI_matrix(object):
 
 
 
-# Initial state
-x_0 = tf.Variable([0.0, 0.0], dtype=tf.float64)
+# # Initial state
+# x_0 = tf.Variable([0.0, 0.0], dtype=tf.float64)
 
-chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
-fi_info = tf.convert_to_tensor(np.eye(4) * 1e-6, dtype=tf.float64)
-det_T = 0.001 #Time step
-theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv]
+# chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
+# fi_info = tf.convert_to_tensor(np.eye(4) * 1e-6, dtype=tf.float64)
+# det_T = 0.001 #Time step
+# theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv]
 
-fi_matrix = FI_matrix()
-x = x_0
-pi = tf.constant(math.pi, dtype=tf.float64)
-scale_factor = 1
-scale_factor_previous = 1
-det_init = tf.linalg.det(fi_info)
-fi_info_scale = fi_info * scale_factor
-fi_info_previous_scale = fi_info_scale
-det_previous_scale = tf.linalg.det(fi_info_previous_scale)
-log_det_previous_scale = tf.math.log(det_previous_scale)
-total_reward_scale = log_det_previous_scale
+# fi_matrix = FI_matrix()
+# x = x_0
+# pi = tf.constant(math.pi, dtype=tf.float64)
+# scale_factor = 1
+# scale_factor_previous = 1
+# det_init = tf.linalg.det(fi_info)
+# fi_info_scale = fi_info * scale_factor
+# fi_info_previous_scale = fi_info_scale
+# det_previous_scale = tf.linalg.det(fi_info_previous_scale)
+# log_det_previous_scale = tf.math.log(det_previous_scale)
+# total_reward_scale = log_det_previous_scale
 
-'''
-start the simulation
-'''
-for k in range(5): #350 = 0.35s
-    # case1: sinus input
-    # u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
-    u = 2
-    dx = fi_matrix.f(x, u, theta)
-    x = x + det_T * dx
-    jacobian = fi_matrix.jacobian(x, u)
-    J_f = jacobian[0]
-    J_h = fi_matrix.jacobian_h(x)
-    df_theta = jacobian[1]
-    chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
-    dh_theta = fi_matrix.sensitivity_y(chi, J_h)
-    fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
-    fi_info_new_scale = fi_info_new * scale_factor
-    fi_info_scale = fi_info_previous_scale + fi_info_new_scale
-    fi_matrix.symmetrie_test(fi_info_scale)
+# '''
+# start the simulation
+# '''
+# for k in range(5): #350 = 0.35s
+#     # case1: sinus input
+#     # u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
+#     u = 2
+#     dx = fi_matrix.f(x, u, theta)
+#     x = x + det_T * dx
+#     jacobian = fi_matrix.jacobian(x, u)
+#     J_f = jacobian[0]
+#     J_h = fi_matrix.jacobian_h(x)
+#     df_theta = jacobian[1]
+#     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
+#     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
+#     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
+#     fi_info_new_scale = fi_info_new * scale_factor
+#     fi_info_scale = fi_info_previous_scale + fi_info_new_scale
+#     fi_matrix.symmetrie_test(fi_info_scale)
  
-    det_fi_scale = tf.linalg.det(fi_info_scale)
-    log_det_scale = tf.math.log(det_fi_scale)
-    step_reward_scale = log_det_scale - log_det_previous_scale
-    print(step_reward_scale)
-    total_reward_scale = total_reward_scale + step_reward_scale
-    # calculate for the next step
-    scale_factor = (det_init / det_fi_scale) ** (1/4)
-    fi_info_previous_scale = fi_info_scale * (scale_factor / scale_factor_previous)
-    log_det_previous_scale = np.linalg.slogdet(fi_info_previous_scale)[1]
-    scale_factor_previous = scale_factor
+#     det_fi_scale = tf.linalg.det(fi_info_scale)
+#     log_det_scale = tf.math.log(det_fi_scale)
+#     step_reward_scale = log_det_scale - log_det_previous_scale
+#     print(step_reward_scale)
+#     total_reward_scale = total_reward_scale + step_reward_scale
+#     # calculate for the next step
+#     scale_factor = (det_init / det_fi_scale) ** (1/4)
+#     fi_info_previous_scale = fi_info_scale * (scale_factor / scale_factor_previous)
+#     log_det_previous_scale = np.linalg.slogdet(fi_info_previous_scale)[1]
+#     scale_factor_previous = scale_factor
 
 
-# The calculation of the det or log det scale is not meaningful because the scale is only used for reward calculation and has no exact meaning in physics.
-print('det sacle is', np.linalg.det(fi_info_scale))
-print('log det scale is', np.log(np.linalg.det(fi_info_scale)))
-print("total_reward_scale", total_reward_scale)
+# # The calculation of the det or log det scale is not meaningful because the scale is only used for reward calculation and has no exact meaning in physics.
+# print('det sacle is', np.linalg.det(fi_info_scale))
+# print('log det scale is', np.log(np.linalg.det(fi_info_scale)))
+# print("total_reward_scale", total_reward_scale)

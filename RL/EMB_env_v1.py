@@ -25,45 +25,30 @@ class EMB_All_info_Env(gym.Env):
         self.theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv]
         # *************************************************** Define the Observation Space ***************************************************
         """
-        An 7-Dim Space: [motor position theta, motor velocity omega, time setp index k, sensitivity y]
+        An 13-Dim Space: [motor position theta, motor velocity omega, time setp index k, sensitivity y]
         """
-        high = np.array([150 ,200, 400, 200, 200, 200, 200], dtype=np.float64)
-        self.observation_space = gym.spaces.Box(low=-high, high=high, shape=(7,), dtype=np.float64)   
+        high = np.array([150 ,200, 400, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10], dtype=np.float64)
+        self.observation_space = gym.spaces.Box(low=-high, high=high, shape=(13,), dtype=np.float64)   
 
         # *************************************************** Define the Action Space ***************************************************
         """
         A 1-Dim Space: Control the voltage of motor
         """
-        self.action_space = gym.spaces.Box(low=-self.max_action, high=self.max_action, shape=(1,), dtype=np.float64)        
+        self.action_space = gym.spaces.Box(low=-self.max_action, high=self.max_action, shape=(1,), dtype=np.float64)  
         
-        with open("data.csv","w") as csvfile: 
-            writer = csv.writer(csvfile)
-            #columns_name
-            writer.writerow(["x_current","y_current","d_x","d_y","c_0","c_1","angle_x","angle_y","reward"])
+        self.total_reward_scale = 0      
+        
+        # with open("data.csv","w") as csvfile: 
+        #     writer = csv.writer(csvfile)
+        #     #columns_name
+        #     writer.writerow(["x_current","y_current","d_x","d_y","c_0","c_1","angle_x","angle_y","reward"])
 
     def _get_obs(self):
         return self.state
 
-    # def get_logs(self):
-    #     logs = np.array([
-    #         self.position[0],
-    #         self.position[1],
-    #         self.x_target,
-    #         self.y_target,
-    #         self.p_value,
-    #         self.d_value,
-    #         self.reward,
-    #         self.angle_x,
-    #         self.angle_y
-    #     ])
-    #     with open("data.csv","a+") as csvfile: 
-    #         writer = csv.writer(csvfile)
-    #         writer.writerow([logs[0],logs[1],logs[0]-logs[2],logs[1]-logs[3],logs[4],logs[5],logs[7],logs[8],logs[6]])
-    #     return logs
-
     def reset(self):
         # self.state = np.array([0.0, 0.0, 0.0, 1e-3, 1e-3, 1e-3, 1e-3], dtype=np.float64)
-        self.state = np.array([0.0, 0.0, 0.0, 1e-3, 0.0, 0.0, 0.0, 1e-3, 0.0, 0.0, 1e-3, 0.0, 1e-3], dtype=np.float64)
+        self.state = np.array([0.0, 0.0, 0.0, 1e-6, 0.0, 0.0, 0.0, 1e-6, 0.0, 0.0, 1e-6, 0.0, 1e-6], dtype=np.float64)
         observation = self._get_obs()
         self.chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
 
@@ -75,7 +60,7 @@ class EMB_All_info_Env(gym.Env):
         self.fi_info_previous_scale = self.fi_info_scale
         det_previous_scale = tf.linalg.det(self.fi_info_previous_scale)
         self.log_det_previous_scale = tf.math.log(det_previous_scale)
-        # total_reward_scale = log_det_previous_scale
+        self.total_reward_scale = tf.cast(self.log_det_previous_scale, dtype=tf.float32)
 
         return observation, {}
 
@@ -84,10 +69,9 @@ class EMB_All_info_Env(gym.Env):
         # x0, x1, k, s1, s2, s3, s4 = self._get_obs() #state from last lime
         x0, x1, k, e11, e12, e13, e14, e22, e23, e24, e33, e34, e44 = self._get_obs() #state from last lime
         x = tf.Variable([x0, x1], dtype=tf.float64)
-
         action = np.clip(action, -1, 1)
         u = self.action_fact * (action + self.max_action) #input current
-
+        
         dx = self.fi_matrix.f(x, u, self.theta)
         x = x + self._dt * dx
 
@@ -115,7 +99,6 @@ class EMB_All_info_Env(gym.Env):
         det_fi_scale = tf.linalg.det(self.fi_info_scale)
         log_det_scale = tf.math.log(det_fi_scale)
         step_reward_scale = log_det_scale - self.log_det_previous_scale
-        # total_reward_scale = total_reward_scale + step_reward_scale
         self.scale_factor = (self.det_init / det_fi_scale) ** (1/4)
         self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
         self.log_det_previous_scale = np.linalg.slogdet(self.fi_info_previous_scale)[1]
@@ -129,9 +112,9 @@ class EMB_All_info_Env(gym.Env):
         # self.state = np.array([x0_new, x1_new, k_new, s1_new, s2_new, s3_new, s4_new], dtype=np.float64)
         done = False
         # ************calculate the rewards************
-        self.reward = step_reward_scale
+        self.reward = tf.cast(step_reward_scale, dtype=tf.float32)
 
-        return self._get_obs(), step_reward_scale, done, {}
+        return self._get_obs(), self.reward, done, {}
 
     def render(self, mode='human'):
         return None
@@ -140,18 +123,18 @@ class EMB_All_info_Env(gym.Env):
         return None
 
 
-env = EMB_All_info_Env()
-env.reset()
-for k in range(5):
-    u = -1/3
-    next_state, reward, done, _ = env.step(u)
-    print(reward)
-    print(next_state)
+# env = EMB_All_info_Env()
+# env.reset()
+# for k in range(2):
+#     u = -1/3
+#     next_state, reward, done, _ = env.step(u)
+#     print(reward)
+#     print(next_state)
 
-env.reset()
-print("*******************")
-for k in range(5):
-    u = -1/3
-    next_state, reward, done, _ = env.step(u)
-    print(reward)
-    print(next_state)
+# env.reset()
+# print("*******************")
+# for k in range(5):
+#     u = -1/3
+#     next_state, reward, done, _ = env.step(u)
+#     print(reward)
+#     print(next_state)

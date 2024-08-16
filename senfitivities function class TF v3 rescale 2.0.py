@@ -160,16 +160,22 @@ det_previous_scale = tf.linalg.det(fi_info_scale)
 log_det_previous_scale = tf.math.log(det_previous_scale)
 total_reward = log_det_previous
 total_reward_scale = log_det_previous_scale
+print("1", total_reward_scale)
 # total_reward = 0
 # total_reward_scale = 0
 
+
+data = np.load('my_data.npz')
+action = data['array'].tolist()
+print(len(action))
 '''
 start the simulation
 '''
-for k in range(5): #350 = 0.35s
+for k in range(200): #350 = 0.35s
     # case1: sinus input
-    # u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
-    u = 2
+    u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
+    # u = action[k]
+    # print(u)
     # # # case2: slope
     # if k == 0:
     #     u = 2
@@ -182,7 +188,6 @@ for k in range(5): #350 = 0.35s
     #     u = tf.constant(0.0, dtype=tf.float64)
     dx = fi_matrix.f(x, u, theta)
     x = x + det_T * dx
-    print(x)
     x0_values.append(x[0])
     x1_values.append(x[1])
     time_values.append((k+1) * det_T)
@@ -196,7 +201,6 @@ for k in range(5): #350 = 0.35s
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
     fi_info_new_scale = fi_info_new * scale_factor
     fi_info += fi_info_new
-    print(fi_info)
     fi_info_0 += fi_info_new
     fi_info_scale += fi_info_new_scale
     fi_matrix.symmetrie_test(fi_info)
@@ -212,6 +216,7 @@ for k in range(5): #350 = 0.35s
     
     step_reward = log_det - log_det_previous
     step_reward_scale = log_det_scale - log_det_previous_scale
+    print(step_reward_scale)
     total_reward = total_reward + step_reward
     total_reward_scale = total_reward_scale + step_reward_scale
     reward_values.append(step_reward_scale)
@@ -221,8 +226,7 @@ for k in range(5): #350 = 0.35s
     fi_info_previous_scale = fi_info_scale
     log_det_previous_scale = np.linalg.slogdet(fi_info_previous_scale)[1]
     scale_factor_previous = scale_factor
-    print('step reward is:', step_reward)
-    print('step reward scale is:', step_reward_scale)
+
 
     if k % 50 == 0:
         # print('step reward is:', step_reward)
