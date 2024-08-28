@@ -48,7 +48,7 @@ RANDOM_SEED = 1  # random seed
 RENDER = False  # render while training
 
 ALG_NAME = 'PPO'
-TRAIN_EPISODES = 50  # total number of episodes for training 1000
+TRAIN_EPISODES = 300  # total number of episodes for training 1000
 TEST_EPISODES = 1  # total number of episodes for testing
 MAX_STEPS = 300  # total number of steps for each episode
 GAMMA = 0.99  # reward discount 0.99 recommanded
@@ -62,8 +62,8 @@ CRITIC_UPDATE_STEPS = 10  # critic update steps
 KL_TARGET = 0.01
 LAM = 0.5
 
-# ppo-clip parameters, 0.25 recommanded
-EPSILON = 0.25
+# ppo-clip parameters, 0.2 recommanded
+EPSILON = 0.2
 
 
 ###############################  PPO  ####################################
@@ -79,6 +79,7 @@ class PPO(object):
             inputs = tl.layers.Input([None, state_dim], tf.float32, 'state')
             layer = tl.layers.Dense(64, tf.nn.relu)(inputs)
             layer = tl.layers.Dense(64, tf.nn.relu)(layer)
+            # layer = tl.layers.Dense(64, tf.nn.relu)(layer)
             v = tl.layers.Dense(1)(layer)
         self.critic = tl.models.Model(inputs, v)
         self.critic.train()
@@ -88,6 +89,7 @@ class PPO(object):
             inputs = tl.layers.Input([None, state_dim], tf.float32, 'state')
             layer = tl.layers.Dense(64, tf.nn.relu)(inputs)
             layer = tl.layers.Dense(64, tf.nn.relu)(layer)
+            # layer = tl.layers.Dense(64, tf.nn.relu)(layer)
             a = tl.layers.Dense(action_dim, tf.nn.tanh)(layer)
             mean = tl.layers.Lambda(lambda x: x * action_bound, name='lambda')(a)
             logstd = tf.Variable(np.zeros(action_dim, dtype=np.float32))
@@ -194,7 +196,7 @@ class PPO(object):
         :param greedy: choose action greedy or not
         :return: clipped action
         """
-        state = state[np.newaxis, :].astype(np.float32)
+        state = state[np.newaxis, :].astype(np.float32) # from [,,,] to [[,,,]]
         mean, std = self.actor(state), tf.exp(self.actor.logstd)
         if greedy:
             action = mean[0]
@@ -254,14 +256,21 @@ class PPO(object):
         self.cumulative_reward_buffer.extend(discounted_r)
         self.reward_buffer.clear()
 
-    def _normalize_clip_observation(x, clip_range=[-5.0, 5.0]):
-        rms = RunningMeanStd(shape=x.shape[1:])
-        norm_x = tf.clip_by_value((x - rms.mean) / rms.std, min(clip_range), max(clip_range))
-        return norm_x, rms
+
+class NormalizedEnv(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(NormalizedEnv, self).__init__(env)
+
+    def observation(self, observation):
+        return self.normalize(observation)
+
+    def normalize(self, observation):
+        return (observation - np.mean(observation)) / (np.std(observation) + 1e-8)
+
 
 if __name__ == '__main__':
     env = EMB_env_v1.EMB_All_info_Env()
-
+    # env = gym.wrappers.NormalizeObservation(env)
     # reproducible
     # env.seed(RANDOM_SEED)
     np.random.seed(RANDOM_SEED)
@@ -279,11 +288,11 @@ if __name__ == '__main__':
         for episode in range(TRAIN_EPISODES):
             state, _ = env.reset()
             episode_reward = env.total_reward_scale
+            ti = 1
             for step in range(MAX_STEPS):  # in one episode
                 if RENDER:
                     env.render()
                 action = agent.get_action(state)[0]
-                print('*****action*******', action)
                 state_, reward, done, info = env.step(action)
                 agent.store_transition(state, action, reward)
                 state = state_
@@ -293,6 +302,9 @@ if __name__ == '__main__':
                 if len(agent.state_buffer) >= BATCH_SIZE:
                     agent.finish_path(state_, done)
                     agent.update()
+                    
+                    print('ti', ti)
+                    ti+=1
                 if done:
                     break
             agent.finish_path(state_, done)
@@ -322,7 +334,8 @@ if __name__ == '__main__':
                 env.render()
                 action = agent.get_action(state, greedy=True)[0]
                 state, reward, done, info = env.step(action)
-                print(reward)
+                print('action is:', 3 * action + 3)
+                print('reward is:', reward)
 
                 episode_reward += reward
                 if done:
@@ -344,7 +357,7 @@ if __name__ == '__main__':
                 np.random.seed(42)
                 action = np.random.uniform(low=-1, high=1)
                 state, reward, done, info = env.step(action)
-                print(reward)
+                print('reward is:', reward)
 
                 episode_reward += reward
                 if done:
@@ -355,3 +368,9 @@ if __name__ == '__main__':
                 'Random Testing  | Episode: {}/{}  | Episode Reward: {:.4f}  | Running Time: {:.4f}'.format(
                     episode + 1, TEST_EPISODES, episode_reward,
                     time.time() - t0))
+            
+# for _ in range(int(replay_len / batch_size)):
+#     data = RelplayBuffer.random_sample(batch_size)
+# ReplayBuffer_size = 4096
+# batch_size = 512
+# repeat_time = 8

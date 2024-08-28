@@ -164,14 +164,10 @@ print("1", total_reward_scale)
 # total_reward = 0
 # total_reward_scale = 0
 
-
-data = np.load('my_data.npz')
-action = data['array'].tolist()
-print(len(action))
 '''
 start the simulation
 '''
-for k in range(200): #350 = 0.35s
+for k in range(300): #350 = 0.35s
     # case1: sinus input
     u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
     # u = action[k]
@@ -182,7 +178,7 @@ for k in range(200): #350 = 0.35s
     # else:
     #     u = tf.Variable(2 - 2/350 * k, dtype=tf.float64)
     # # case3: one sinus peroide
-    # if k <= 200:
+    # if k <= 50:
     #     u = tf.Variable(1 + 1 * tf.math.sin(2*pi*k/200 - pi/2), dtype=tf.float64)
     # else:
     #     u = tf.constant(0.0, dtype=tf.float64)
@@ -206,6 +202,7 @@ for k in range(200): #350 = 0.35s
     fi_matrix.symmetrie_test(fi_info)
     fi_matrix.symmetrie_test(fi_info_scale)
     log_det_sign, log_det = np.linalg.slogdet(fi_info)
+    
     if log_det_sign < 0:
         print('not PSD FI matrix')
         print(k)
@@ -213,10 +210,11 @@ for k in range(200): #350 = 0.35s
     log_det_values.append(log_det)
     det_fi_scale = tf.linalg.det(fi_info_scale)
     log_det_scale = tf.math.log(det_fi_scale)
+    print(fi_info_scale)
     
     step_reward = log_det - log_det_previous
     step_reward_scale = log_det_scale - log_det_previous_scale
-    print(step_reward_scale)
+    # print(step_reward_scale)
     total_reward = total_reward + step_reward
     total_reward_scale = total_reward_scale + step_reward_scale
     reward_values.append(step_reward_scale)
