@@ -49,6 +49,7 @@ class EMB_All_info_Env(gym.Env):
     def reset(self):
         # self.state = np.array([0.0, 0.0, 0.0, 1e-3, 1e-3, 1e-3, 1e-3], dtype=np.float64)
         self.state = np.array([0.0, 0.0, 0.0, 1e-6, 0.0, 0.0, 0.0, 1e-6, 0.0, 0.0, 1e-6, 0.0, 1e-6], dtype=np.float64)
+        self.count = 0
         observation = self._get_obs()
         self.chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
 
@@ -114,7 +115,12 @@ class EMB_All_info_Env(gym.Env):
         # ************calculate the rewards************
         self.reward = tf.cast(step_reward_scale, dtype=tf.float32)
 
-        return self._get_obs(), self.reward, done, {}
+        self.count += 1
+        if self.count == 300:
+            done = True
+            self.reset()
+
+        return self._get_obs(), self.reward, done, {}, {}
     
     def render(self, mode='human'):
         return None

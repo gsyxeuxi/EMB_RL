@@ -36,6 +36,8 @@ BATCH_SIZE = NUM_ENVS * NUM_STEPS
 NUM_EPOCHS = 10 # number of epochs K for each minibatch
 ACTOR_UPDATE_STEPS = 10  # actor update steps
 CRITIC_UPDATE_STEPS = 10  # critic update steps
+entropy_coef = 0.0 # 0.01 
+max_grad_norm = 0.5 # maximal gradient, to prevent form gradient explosion
 
 # ppo-penalty parameters
 KL_TARGET = 0.01
@@ -78,7 +80,8 @@ class PPO(object):
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(layer)
             v = tf.keras.layers.Dense(1,  kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
                                       bias_initializer=tf.keras.initializers.Constant(1.0))(layer)
-        self.critic = tf.keras.Model(input, v, name="critic")              
+        self.critic = tf.keras.Model(input, v, name="critic")  
+        self.critic.summary()            
 
         # actor
         with tf.name_scope('actor'):
@@ -88,10 +91,11 @@ class PPO(object):
             layer = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(layer)
             a_mean = tf.keras.layers.Dense(action_dim, activation='tanh', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
-                                           bias_initializer=tf.keras.initializers.Constant(0.1))(layer)
+                                           bias_initializer=tf.keras.initializers.Constant(0.01))(layer)
             logstd = tf.Variable(np.zeros(action_dim, dtype=np.float32), trainable=True, name='logstd') # This have no input, so it is state independent
         self.actor = tf.keras.Model(input, a_mean, name='actor')
         self.actor.logstd = logstd
+        self.actor.summary()
 
         self.actor_opt = tf.optimizers.Adam(LR_A)
         self.critic_opt = tf.optimizers.Adam(LR_C)
@@ -230,8 +234,8 @@ class PPO(object):
         path = os.path.join('model', '_'.join([ALG_NAME, ENV_ID]))
         if not os.path.exists(path):
             os.makedirs(path)
-        tl.files.save_weights_to_hdf5(os.path.join(path, 'actor.hdf5'), self.actor)
-        tl.files.save_weights_to_hdf5(os.path.join(path, 'critic.hdf5'), self.critic)
+        self.actor.save(os.path.join(path, 'actor.keras'))
+        self.critic.save(os.path.join(path, 'critic.keras'))
 
     def load(self):
         """
@@ -239,8 +243,8 @@ class PPO(object):
         :return: None
         """
         path = os.path.join('model', '_'.join([ALG_NAME, ENV_ID]))
-        tl.files.load_hdf5_to_weights_in_order(os.path.join(path, 'actor.hdf5'), self.actor)
-        tl.files.load_hdf5_to_weights_in_order(os.path.join(path, 'critic.hdf5'), self.critic)
+        self.actor = tf.keras.models.load_model(os.path.join(path, 'actor.keras'))
+        self.critic = tf.keras.models.load_model(os.path.join(path, 'critic.keras'))
 
     def store_transition(self, state, action, reward):
         """
@@ -275,7 +279,7 @@ class PPO(object):
 
 if __name__ == '__main__':
     env = EMB_env_v2.EMB_All_info_Env()
-    # env = NormalizedEnv(env)
+    # env = gym.wrappers.NormalizeObservation(env)
 
     # reproducible
     # env.seed(RANDOM_SEED)
@@ -309,13 +313,14 @@ if __name__ == '__main__':
             for step in range(NUM_STEPS):  # N envs with M steps
                 total_step += NUM_ENVS * 1
                 states[step] = next_state
+                print(next_state)
                 dones[step] = next_done
                 # get action and value in same function
                 action, logprob, _, value = agent.get_action_and_value(next_state)
                 values[step] = value[0] #tf.([x])
                 actions[step] = action #tf.([x])
                 logprobs[step] = logprob #tf.([x])
-                next_state, reward, done, info = env.step(action[0]) 
+                next_state, reward, done, truncateds, info = env.step(action[0]) 
                 #next_state = [], reward = tf.([x]), done = bool, action[0] = []
                 rewards[step] = reward
                 next_done = done
@@ -371,8 +376,8 @@ if __name__ == '__main__':
                     # advantage nomalization
                     mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
 
-                    with tf.GradientTape() as tape:
-                        _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_states[mb_inds], b_actions[mb_inds])
+                    with tf.GradientTape() as a_tape:
+                        _, newlogprob, entropy, _ = agent.get_action_and_value(b_states[mb_inds], b_actions[mb_inds])
                         logratio = newlogprob - b_logprobs[mb_inds]
                         ratio = tf.exp(logratio)
                         # Policy loss
@@ -381,20 +386,26 @@ if __name__ == '__main__':
                         tf.minimum(surr,
                                 tf.clip_by_value(ratio, 1. - EPSILON, 1. + EPSILON) * mb_advantages)
                                 )
-                        
-                        # Value loss
-                        v_loss = tf.reduce_mean(tf.square(newvalue - b_returns[mb_inds]))
                         # Entropy loss
                         e_loss = tf.reduce_mean(entropy)
-
+                        loss = p_loss - entropy_coef * e_loss
                     # minimal policy loss and value loss, but maximal entropy loss, maximal entropy will let the agent explore more
-                    print('p_loss', p_loss)
-                    print('v_loss', v_loss)
-                    print('e_loss', e_loss)
-                    a_gard = tape.gradient(p_loss, agent.actor.trainable_weights)
-                    agent.actor_opt.apply_gradients(zip(a_gard, agent.actor.trainable_weights))
-                    c_grad = tape.gradient(v_loss, agent.critic.trainable_weights)
+                    # print('p_loss', p_loss)
+                    # print('e_loss', e_loss)
+                    a_grad = a_tape.gradient(p_loss, agent.actor.trainable_weights)
+                    # print('a_grad', a_grad) #a_grad seems 0
+                    a_grad_clipped, _ = tf.clip_by_global_norm(a_grad, max_grad_norm)
+                    agent.actor_opt.apply_gradients(zip(a_grad, agent.actor.trainable_weights))
+
+                    with tf.GradientTape() as c_tape:
+                        _, _, _, newvalue = agent.get_action_and_value(b_states[mb_inds], b_actions[mb_inds])
+                        # Value loss
+                        v_loss = 0.5 * tf.reduce_mean(tf.square(newvalue - b_returns[mb_inds]))
+                    c_grad = c_tape.gradient(v_loss, agent.critic.trainable_weights)
+                    # print('c_grad', c_grad) #c_grad seems very big
+                    c_grad_clipped, _ = tf.clip_by_global_norm(c_grad, max_grad_norm)
                     agent.critic_opt.apply_gradients(zip(c_grad, agent.critic.trainable_weights))
+                    # print('v_loss', v_loss)
 
                     actor_losses.append(p_loss.numpy())
                     critic_losses.append(v_loss.numpy())
@@ -404,17 +415,17 @@ if __name__ == '__main__':
                 tf.summary.scalar('actor_loss', np.mean(actor_losses), step=total_step)
                 tf.summary.scalar('critic_loss', np.mean(critic_losses), step=total_step)
                 tf.summary.scalar('entropy', np.mean(entropy_losses), step=total_step)
-
+            
             actor_loss_avg = np.mean(actor_losses)
             critic_loss_avg = np.mean(critic_losses)
             print(f"| Avg. Loss (Act / Crit): {actor_loss_avg:.3f} / {critic_loss_avg:.3f} ")
             print( "'-----------------------------------------")
             
-        all_rollout_reward.append(rollout_reward)
-        print(
-            'Training  | Update: {}/{}  | Rollout Reward: {:.4f}  | Running Time: {:.4f}'.format(
-                updates + 1, num_updates, rollout_reward, time.time() - t0)
-        )
+            all_rollout_reward.append(rollout_reward)
+            print(
+                'Training  | Update: {}/{}  | Rollout Reward: {:.4f}  | Running Time: {:.4f}'.format(
+                    updates + 1, num_updates, rollout_reward, time.time() - t0)
+            )
         agent.save()
 
         plt.plot(all_rollout_reward)
@@ -432,7 +443,7 @@ if __name__ == '__main__':
             # for step in range(5):
                 env.render()
                 action = agent.get_action(state, greedy=True)[0]
-                state, reward, done, info = env.step(action)
+                state, reward, done, _, info = env.step(action)
                 print(3 * action + 3)
                 print(reward)
 
@@ -455,7 +466,7 @@ if __name__ == '__main__':
                 env.render()
                 np.random.seed(42)
                 action = np.random.uniform(low=-1, high=1)
-                state, reward, done, info = env.step(action)
+                state, reward, done, _, info = env.step(action)
                 print(reward)
 
                 episode_reward += reward
