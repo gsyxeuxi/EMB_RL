@@ -6,6 +6,13 @@ import time
 import tensorflow as tf
 from EMB_model_v1 import FI_matrix
 
+'''
+EMB_env_v2:
+terminated and turncated added, is safe function added
+max_env_steps set to 300
+
+
+'''
 
 class EMB_All_info_Env(gym.Env):
     metadata = {"render.modes": ["human"]}  # metadata attribute is used to define render model and the framrate
@@ -13,7 +20,7 @@ class EMB_All_info_Env(gym.Env):
     def __init__(self) -> None:
         self.fi_matrix = FI_matrix()
         self._dt = 0.001
-        self.max_env_steps = 25000
+        self.max_env_steps = 300
         self.count = 0 
         self.reward = None
         self.current = None # input u
@@ -23,11 +30,13 @@ class EMB_All_info_Env(gym.Env):
         self.max_action = 1 # action space normalizaton
         self.action_fact = 3 # restore action space to (0, 6)
         self.theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv]
+        self.position_range = (-100, 100)
+        self.velocity_range = (-500, 500)
         # *************************************************** Define the Observation Space ***************************************************
         """
         An 13-Dim Space: [motor position theta, motor velocity omega, time setp index k, FIM element]
         """
-        high = np.array([150 ,200, 400, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10], dtype=np.float64)
+        high = np.array([100, 500, 400, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10], dtype=np.float64)
         self.observation_space = gym.spaces.Box(low=-high, high=high, shape=(13,), dtype=np.float64)   
 
         # *************************************************** Define the Action Space ***************************************************
@@ -43,6 +52,19 @@ class EMB_All_info_Env(gym.Env):
         #     #columns_name
         #     writer.writerow(["x_current","y_current","d_x","d_y","c_0","c_1","angle_x","angle_y","reward"])
 
+    @property
+    def terminated(self):
+        terminated = not self.is_safe
+        return terminated
+    
+    @property
+    def is_safe(self):
+        min_x, max_x = self.position_range
+        min_v, max_v = self.velocity_range
+        x = self.state[0]
+        v = self.state[1]
+        return min_x < x < max_x and min_v < v < max_v
+    
     def _get_obs(self):
         return self.state
 
@@ -111,36 +133,18 @@ class EMB_All_info_Env(gym.Env):
         self.state[2] = k_new
         self.state[-10:] = FIM_upper_triangle[:]
         # self.state = np.array([x0_new, x1_new, k_new, s1_new, s2_new, s3_new, s4_new], dtype=np.float64)
-        done = False
         # ************calculate the rewards************
         self.reward = tf.cast(step_reward_scale, dtype=tf.float32)
-
         self.count += 1
-        if self.count == 300:
-            done = True
-            self.reset()
-
-        return self._get_obs(), self.reward, done, {}, {}
+        terminated = self.terminated
+        print(self.count)
+        if self.count == self.max_env_steps:
+            truncated = True
+        else: truncated = False
+        return self._get_obs(), self.reward, terminated, truncated, {}
     
     def render(self, mode='human'):
         return None
         
     def close(self):
         return None
-
-
-# env = EMB_All_info_Env()
-# env.reset()
-# for k in range(2):
-#     u = -1/3
-#     next_state, reward, done, _ = env.step(u)
-#     print(reward)
-#     print(next_state)
-
-# env.reset()
-# print("*******************")
-# for k in range(5):
-#     u = -1/3
-#     next_state, reward, done, _ = env.step(u)
-#     print(reward)
-#     print(next_state)

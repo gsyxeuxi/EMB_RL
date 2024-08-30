@@ -7,8 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-
-import tensorlayer as tl
 import EMB_env_v2
 
 parser = argparse.ArgumentParser(description='Train or test neural net motor controller.')
@@ -22,7 +20,6 @@ args = parser.parse_args()
 ENV_ID = 'EMB_v1'  # environment id
 RANDOM_SEED = 1  # random seed
 RENDER = False  # render while training
-
 ALG_NAME = 'PPO'
 NUM_ENVS = 1 # the number of parallel running envs
 TOTAL_TIMESETPS = 25000  # total timesteps for training 1000
@@ -38,15 +35,10 @@ ACTOR_UPDATE_STEPS = 10  # actor update steps
 CRITIC_UPDATE_STEPS = 10  # critic update steps
 entropy_coef = 0.0 # 0.01 
 max_grad_norm = 0.5 # maximal gradient, to prevent form gradient explosion
-
 # ppo-penalty parameters
-KL_TARGET = 0.01
 LAM = 0.5
-
 # ppo-clip parameters, 0.25 recommanded
 EPSILON = 0.2
-
-
 
 def make_env(gym_id, seed):
     def thunk():
@@ -63,17 +55,17 @@ def make_env(gym_id, seed):
         return env
 
     return thunk
-###############################  PPO  ####################################
 
+###############################  PPO  ####################################
 
 class PPO(object):
     """
     PPO class
     """
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, envs):
         # critic
         with tf.name_scope('critic'):
-            input = tf.keras.Input(shape = (None, state_dim), dtype=tf.float32, name='state')
+            input = tf.keras.Input(shape = (None, np.array(envs.single_observation_space.shape).prod()), dtype=tf.float32, name='state')
             layer = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(input)
             layer = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
@@ -85,21 +77,20 @@ class PPO(object):
 
         # actor
         with tf.name_scope('actor'):
-            input = tf.keras.Input(shape = (None, state_dim), dtype=tf.float32, name='state')
+            input = tf.keras.Input(shape = (None, np.array(envs.single_observation_space.shape).prod()), dtype=tf.float32, name='state')
             layer = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(input)
             layer = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(layer)
-            a_mean = tf.keras.layers.Dense(action_dim, activation='tanh', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
+            a_mean = tf.keras.layers.Dense(np.prod(envs.single_action_space.shape), activation='tanh', kernel_initializer=tf.keras.initializers.Orthogonal(gain=np.sqrt(2)), 
                                            bias_initializer=tf.keras.initializers.Constant(0.01))(layer)
-            logstd = tf.Variable(np.zeros(action_dim, dtype=np.float32), trainable=True, name='logstd') # This have no input, so it is state independent
+            logstd = tf.Variable(np.zeros(np.prod(envs.single_action_space.shape), dtype=np.float32), trainable=True, name='logstd') # This have no input, so it is state independent
         self.actor = tf.keras.Model(input, a_mean, name='actor')
         self.actor.logstd = logstd
         self.actor.summary()
 
         self.actor_opt = tf.optimizers.Adam(LR_A)
         self.critic_opt = tf.optimizers.Adam(LR_C)
-
 
         # create tensorboard logs
         self.current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -108,103 +99,6 @@ class PPO(object):
         self.log_dir = 'logs/' + self.current_time
         self.summary_writer = tf.summary.create_file_writer(self.log_dir)
 
-        self.state_buffer, self.action_buffer = [], []
-        self.reward_buffer, self.cumulative_reward_buffer = [], []
-
-
-    def train_actor(self, state, action, adv, old_pi):
-        """
-        Update policy network
-        :param state: state batch
-        :param action: action batch
-        :param adv: advantage batch
-        :param old_pi: old pi distribution
-        :return: kl_mean or None
-        """
-        with tf.GradientTape() as tape:
-            mean, std = self.actor(state), tf.exp(self.actor.logstd)
-            pi = tfp.distributions.Normal(mean, std)
-
-            ratio = tf.exp(pi.log_prob(action) - old_pi.log_prob(action))
-            surr = ratio * adv
-            if self.method == 'penalty':  # ppo penalty
-                kl = tfp.distributions.kl_divergence(old_pi, pi)
-                kl_mean = tf.reduce_mean(kl)
-                loss = -(tf.reduce_mean(surr - self.lam * kl))
-            else:  # ppo clip
-                loss = -tf.reduce_mean(
-                    tf.minimum(surr,
-                               tf.clip_by_value(ratio, 1. - self.epsilon, 1. + self.epsilon) * adv)
-                )
-        a_gard = tape.gradient(loss, self.actor.trainable_weights)
-        self.actor_opt.apply_gradients(zip(a_gard, self.actor.trainable_weights))
-
-        if self.method == 'kl_pen':
-            return kl_mean
-
-    def train_critic(self, reward, state):
-        """
-        Update actor network
-        :param reward: cumulative reward batch
-        :param state: state batch
-        :return: None
-        """
-        reward = np.array(reward, dtype=np.float32)
-        with tf.GradientTape() as tape:
-            advantage = reward - self.critic(state)
-            loss = tf.reduce_mean(tf.square(advantage))
-        grad = tape.gradient(loss, self.critic.trainable_weights)
-        self.critic_opt.apply_gradients(zip(grad, self.critic.trainable_weights))
-
-    def update(self):
-        """
-        Update parameter with the constraint of KL divergent
-        :return: None
-        """
-        s = np.array(self.state_buffer, np.float32)
-        a = np.array(self.action_buffer, np.float32)
-        r = np.array(self.cumulative_reward_buffer, np.float32)
-        mean, std = self.actor(s), tf.exp(self.actor.logstd)
-        pi = tfp.distributions.Normal(mean, std)
-        adv = r - self.critic(s)
-
-        # update actor
-        if self.method == 'kl_pen':
-            for _ in range(ACTOR_UPDATE_STEPS):
-                kl = self.train_actor(s, a, adv, pi)
-            if kl < self.kl_target / 1.5:
-                self.lam /= 2
-            elif kl > self.kl_target * 1.5:
-                self.lam *= 2
-        else:
-            for _ in range(ACTOR_UPDATE_STEPS):
-                self.train_actor(s, a, adv, pi)
-
-        # update critic
-        for _ in range(CRITIC_UPDATE_STEPS):
-            self.train_critic(r, s)
-
-        self.state_buffer.clear()
-        self.action_buffer.clear()
-        self.cumulative_reward_buffer.clear()
-        self.reward_buffer.clear()
-
-    def get_action(self, state, greedy=False):
-        """
-        Choose action
-        :param state: state
-        :param greedy: choose action greedy or not
-        :return: clipped action
-        """
-        state = state[np.newaxis, :].astype(np.float32)
-        mean, std = self.actor(state), tf.exp(self.actor.logstd)
-        if greedy:
-            action = mean[0]
-        else:
-            pi = tfp.distributions.Normal(mean, std) #this function can do the broadcast automatically
-            action = tf.squeeze(pi.sample(1), axis=0)[0]  # choosing action
-        return np.clip(action, -self.action_bound, self.action_bound)
-    
     def get_action_and_value(self, state, action=None): 
         """
         Choose action and get value
@@ -246,54 +140,18 @@ class PPO(object):
         self.actor = tf.keras.models.load_model(os.path.join(path, 'actor.keras'))
         self.critic = tf.keras.models.load_model(os.path.join(path, 'critic.keras'))
 
-    def store_transition(self, state, action, reward):
-        """
-        Store state, action, reward at each step
-        :param state:
-        :param action:
-        :param reward:
-        :return: None
-        """
-        self.state_buffer.append(state)
-        self.action_buffer.append(action)
-        self.reward_buffer.append(reward)
-
-    def finish_path(self, next_state, done):
-        """
-        Calculate cumulative reward
-        :param next_state:
-        :return: None
-        """
-        if done:
-            v_s_ = 0
-        else:
-            v_s_ = self.critic(np.array([next_state], np.float32))[0, 0]
-        discounted_r = []
-        for r in self.reward_buffer[::-1]:
-            v_s_ = r + GAMMA * v_s_
-            discounted_r.append(v_s_)
-        discounted_r.reverse()
-        discounted_r = np.array(discounted_r)[:, np.newaxis]
-        self.cumulative_reward_buffer.extend(discounted_r)
-        self.reward_buffer.clear()
-
 if __name__ == '__main__':
     env = EMB_env_v2.EMB_All_info_Env()
-    # env = gym.wrappers.NormalizeObservation(env)
-
+    env = gym.wrappers.NormalizeObservation(env)
+    envs = gym.vector.SyncVectorEnv([lambda: env for i in range(NUM_ENVS)])
     # reproducible
     # env.seed(RANDOM_SEED)
     np.random.seed(RANDOM_SEED)
     tf.random.set_seed(RANDOM_SEED)
-
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-
-    agent = PPO(state_dim, action_dim)
-
-    states = np.zeros((NUM_STEPS, NUM_ENVS) + env.observation_space.shape, dtype=np.float32)
+    agent = PPO(envs)
+    states = np.zeros((NUM_STEPS, NUM_ENVS) + envs.observation_space.shape, dtype=np.float32)
     # shape=(512, 1, 13)
-    actions = np.zeros((NUM_STEPS, NUM_ENVS) + env.action_space.shape, dtype=np.float32)
+    actions = np.zeros((NUM_STEPS, NUM_ENVS) + envs.action_space.shape, dtype=np.float32)
     # shape=(512, 1, 1)
     logprobs = np.zeros((NUM_STEPS, NUM_ENVS), dtype=np.float32)
     rewards = np.zeros((NUM_STEPS, NUM_ENVS), dtype=np.float32)
@@ -303,7 +161,7 @@ if __name__ == '__main__':
     t0 = time.time()
     if args.train:
         total_step = 0
-        next_state, _ = env.reset()
+        next_state, _ = envs.reset()
         next_done = tf.zeros(NUM_ENVS)
         # episode_reward = env.total_reward_scale # this need to be reconsider
         num_updates = TOTAL_TIMESETPS // BATCH_SIZE 
@@ -313,18 +171,17 @@ if __name__ == '__main__':
             for step in range(NUM_STEPS):  # N envs with M steps
                 total_step += NUM_ENVS * 1
                 states[step] = next_state
-                print(next_state)
                 dones[step] = next_done
                 # get action and value in same function
                 action, logprob, _, value = agent.get_action_and_value(next_state)
                 values[step] = value[0] #tf.([x])
                 actions[step] = action #tf.([x])
                 logprobs[step] = logprob #tf.([x])
-                next_state, reward, done, truncateds, info = env.step(action[0]) 
+                next_state, reward, terminated, truncated, info = envs.step(action[0]) 
                 #next_state = [], reward = tf.([x]), done = bool, action[0] = []
                 rewards[step] = reward
-                next_done = done
-
+                next_done = terminated or truncated
+            
             # bootstrap value if not done
             next_value = agent.get_value(next_state)[0] #tf.([x])
             # if args.gae:
@@ -353,9 +210,9 @@ if __name__ == '__main__':
             advantages = returns - values
 
             # flatten the batch
-            b_states = states.reshape((-1,) + env.observation_space.shape)# (N*M, 13)
+            b_states = states.reshape((-1,) + envs.single_observation_space.shape)# (N*M, 13)
             b_logprobs = logprobs.reshape(-1)# (N*M,)
-            b_actions = actions.reshape((-1,) + env.action_space.shape)# (N*M, 1)
+            b_actions = actions.reshape((-1,) + envs.single_action_space.shape)# (N*M, 1)
             b_advantages = advantages.reshape(-1)# (N*M,)
             b_returns = returns.reshape(-1)# (N*M,)
             b_values = values.reshape(-1)# (N*M,)
@@ -415,12 +272,11 @@ if __name__ == '__main__':
                 tf.summary.scalar('actor_loss', np.mean(actor_losses), step=total_step)
                 tf.summary.scalar('critic_loss', np.mean(critic_losses), step=total_step)
                 tf.summary.scalar('entropy', np.mean(entropy_losses), step=total_step)
-            
             actor_loss_avg = np.mean(actor_losses)
             critic_loss_avg = np.mean(critic_losses)
             print(f"| Avg. Loss (Act / Crit): {actor_loss_avg:.3f} / {critic_loss_avg:.3f} ")
             print( "'-----------------------------------------")
-            
+    
             all_rollout_reward.append(rollout_reward)
             print(
                 'Training  | Update: {}/{}  | Rollout Reward: {:.4f}  | Running Time: {:.4f}'.format(
@@ -479,8 +335,3 @@ if __name__ == '__main__':
                     episode + 1, TEST_EPISODES, episode_reward,
                     time.time() - t0))
             
-# for _ in range(int(replay_len / batch_size)):
-#     data = RelplayBuffer.random_sample(batch_size)
-# ReplayBuffer_size = 4096
-# batch_size = 512
-# repeat_time = 8
