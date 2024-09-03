@@ -198,6 +198,7 @@ class PPO(object):
         """
         state = state[np.newaxis, :].astype(np.float32) # from [,,,] to [[,,,]]
         mean, std = self.actor(state), tf.exp(self.actor.logstd)
+        print(std)
         if greedy:
             action = mean[0]
         else:

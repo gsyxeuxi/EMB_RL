@@ -32,6 +32,7 @@ class EMB_All_info_Env(gym.Env):
         self.theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=tf.float64) #[self.km, self.k1, self.fc, self.fv]
         self.position_range = (-100, 100)
         self.velocity_range = (-500, 500)
+        self.dangerous_position = 75
         # *************************************************** Define the Observation Space ***************************************************
         """
         An 13-Dim Space: [motor position theta, motor velocity omega, time setp index k, FIM element]
@@ -44,14 +45,8 @@ class EMB_All_info_Env(gym.Env):
         A 1-Dim Space: Control the voltage of motor
         """
         self.action_space = gym.spaces.Box(low=-self.max_action, high=self.max_action, shape=(1,), dtype=np.float64)  
-        
         self.total_reward_scale = 0      
         
-        # with open("data.csv","w") as csvfile: 
-        #     writer = csv.writer(csvfile)
-        #     #columns_name
-        #     writer.writerow(["x_current","y_current","d_x","d_y","c_0","c_1","angle_x","angle_y","reward"])
-
     @property
     def terminated(self):
         terminated = not self.is_safe
@@ -65,6 +60,10 @@ class EMB_All_info_Env(gym.Env):
         v = self.state[1]
         return min_x < x < max_x and min_v < v < max_v
     
+    @property
+    def is_dangerous(self):
+        return self.state[0] > self.dangerous_position
+    
     def _get_obs(self):
         return self.state
 
@@ -74,7 +73,6 @@ class EMB_All_info_Env(gym.Env):
         self.count = 0
         observation = self._get_obs()
         self.chi = tf.convert_to_tensor(np.zeros((2,4)), dtype=tf.float64)
-
         self.scale_factor = 1
         self.scale_factor_previous = 1
         self.fi_info = tf.convert_to_tensor(np.eye(4) * 1e-6, dtype=tf.float64)
@@ -97,9 +95,7 @@ class EMB_All_info_Env(gym.Env):
         
         dx = self.fi_matrix.f(x, u, self.theta)
         x = x + self._dt * dx
-
         x0_new, x1_new = np.array(x)[:]
-
         jacobian = self.fi_matrix.jacobian(x, u)
         J_f = jacobian[0]
         J_h = self.fi_matrix.jacobian_h(x)
@@ -134,13 +130,20 @@ class EMB_All_info_Env(gym.Env):
         self.state[-10:] = FIM_upper_triangle[:]
         # self.state = np.array([x0_new, x1_new, k_new, s1_new, s2_new, s3_new, s4_new], dtype=np.float64)
         # ************calculate the rewards************
-        self.reward = tf.cast(step_reward_scale, dtype=tf.float32)
+        if not self.is_safe:
+            self.reward = -50
+        elif self.is_dangerous:
+            self.reward = tf.cast(step_reward_scale, dtype=tf.float32) - 0.01 * (x0_new - self.dangerous_position) ** 2
+        else:
+            self.reward = tf.cast(step_reward_scale, dtype=tf.float32)
+        
         self.count += 1
         terminated = self.terminated
-        print(self.count)
+
         if self.count == self.max_env_steps:
             truncated = True
         else: truncated = False
+        
         return self._get_obs(), self.reward, terminated, truncated, {}
     
     def render(self, mode='human'):

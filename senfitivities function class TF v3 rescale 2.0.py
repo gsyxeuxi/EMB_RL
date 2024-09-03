@@ -210,7 +210,7 @@ for k in range(300): #350 = 0.35s
     log_det_values.append(log_det)
     det_fi_scale = tf.linalg.det(fi_info_scale)
     log_det_scale = tf.math.log(det_fi_scale)
-    print(fi_info_scale)
+    # print(fi_info_scale)
     
     step_reward = log_det - log_det_previous
     step_reward_scale = log_det_scale - log_det_previous_scale
