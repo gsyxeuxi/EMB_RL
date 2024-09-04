@@ -9,7 +9,7 @@ matplotlib.use('Agg')
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import EMB_env_v2
+import EMB_env_v3
 
 parser = argparse.ArgumentParser(description='Train or test neural net motor controller.')
 parser.add_argument('--train', dest='train', action='store_true', default=False)
@@ -17,9 +17,12 @@ parser.add_argument('--test', dest='test', action='store_true', default=True)
 parser.add_argument('--random', dest='random', action='store_true', default=False)
 args = parser.parse_args()
 
+'''
+Use scaled FIM for training
+'''
 #####################  hyper parameters  ####################
 
-ENV_ID = 'EMB_v2'  # environment id
+ENV_ID = 'EMB_v3'  # environment id
 RANDOM_SEED = 1  # random seed
 RENDER = False  # render while training
 ALG_NAME = 'PPO'
@@ -169,7 +172,7 @@ class PPO(object):
         
 
 if __name__ == '__main__':
-    env = EMB_env_v2.EMB_All_info_Env()
+    env = EMB_env_v3.EMB_All_info_Env()
     env = gym.wrappers.NormalizeObservation(env)
     envs = gym.vector.SyncVectorEnv([lambda: env for i in range(NUM_ENVS)])
     # reproducible

@@ -9,9 +9,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_v2:
-terminated and turncated added, is safe function added
-max_env_steps set to 300
+EMB_env_v3:
+Use scaled FIM for obs
+
 
 
 '''
@@ -112,9 +112,9 @@ class EMB_All_info_Env(gym.Env):
         self.fi_info_scale = self.fi_info_previous_scale + fi_info_new_scale
         
         FIM_upper_triangle = []
-        for i in range(np.array(self.fi_info).shape[0]):
-            for j in range(i, np.array(self.fi_info).shape[1]):
-                FIM_upper_triangle.append(np.array(self.fi_info)[i, j])
+        for i in range(np.array(self.fi_info_scale).shape[0]):
+            for j in range(i, np.array(self.fi_info_scale).shape[1]):
+                FIM_upper_triangle.append(np.array(self.fi_info_scale)[i, j])
         
         # s1_new, s2_new, s3_new, s4_new = upper_triangle_elements[:]
 

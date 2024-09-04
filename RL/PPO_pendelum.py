@@ -9,7 +9,6 @@ matplotlib.use('Agg')
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import EMB_env_v2
 
 parser = argparse.ArgumentParser(description='Train or test neural net motor controller.')
 parser.add_argument('--train', dest='train', action='store_true', default=False)
@@ -17,18 +16,24 @@ parser.add_argument('--test', dest='test', action='store_true', default=True)
 parser.add_argument('--random', dest='random', action='store_true', default=False)
 args = parser.parse_args()
 
+'''
+Use scaled FIM for training
+'''
+
+gpus = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(gpus[0], True)
 #####################  hyper parameters  ####################
 
-ENV_ID = 'EMB_v2'  # environment id
+ENV_ID = 'Pendulum-v1'  # environment id
 RANDOM_SEED = 1  # random seed
-RENDER = False  # render while training
+RENDER = True  # render while training
 ALG_NAME = 'PPO'
 NUM_ENVS = 1 # the number of parallel running envs
-TOTAL_TIMESETPS = 100000  # total timesteps for training 25000=832s
+TOTAL_TIMESETPS = 200000  # total timesteps for training 25000=832s
 TEST_EPISODES = 1  # total number of episodes for testing
 NUM_STEPS = 2048 # total number of steps N*M 1024
 GAMMA = 0.99  # reward discount 0.99 recommanded
-LR_A = 0.0002  # learning rate for actor
+LR_A = 0.0001  # learning rate for actor
 LR_C = 0.0002  # learning rate for critic 0.0003 is a safe default
 MINIBATCH_SIZE = 64  # update minibatch size, Recommend equating this to the width of the neural network
 BATCH_SIZE = NUM_ENVS * NUM_STEPS
@@ -169,11 +174,12 @@ class PPO(object):
         
 
 if __name__ == '__main__':
-    env = EMB_env_v2.EMB_All_info_Env()
+    env = gym.make(ENV_ID)
+    # env = gym.make(ENV_ID, render_mode="human")
     env = gym.wrappers.NormalizeObservation(env)
+    env.reset(seed=RANDOM_SEED)
     envs = gym.vector.SyncVectorEnv([lambda: env for i in range(NUM_ENVS)])
-    # reproducible
-    # env.seed(RANDOM_SEED)
+
     np.random.seed(RANDOM_SEED)
     tf.random.set_seed(RANDOM_SEED)
     agent = PPO(envs)
@@ -197,6 +203,8 @@ if __name__ == '__main__':
         all_rollout_reward = []
         for updates in range(num_updates):
             for step in range(NUM_STEPS):  # N envs with M steps
+                if RENDER:
+                    env.render()
                 total_step += NUM_ENVS * 1
                 states[step] = next_state
                 dones[step] = next_done
@@ -261,7 +269,9 @@ if __name__ == '__main__':
                     mb_inds = b_inds[start:end]
                     mb_advantages = b_advantages[mb_inds]
                     # advantage nomalization
-                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
+                    # mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
+                    # print('adv mean', mb_advantages.mean())
+                    # print('adv std', mb_advantages.std())
                 
                     with tf.GradientTape() as a_tape:
                         _, newlogprob, entropy, _ = agent.get_action_and_value(b_states[mb_inds], b_actions[mb_inds])
@@ -269,13 +279,14 @@ if __name__ == '__main__':
                         ratio = tf.exp(logratio)
                         # Policy loss
                         surr = mb_advantages * ratio
+                        # print(mb_advantages)
                         p_loss = -tf.reduce_mean(
                         tf.minimum(surr,
                                 tf.clip_by_value(ratio, 1. - EPSILON, 1. + EPSILON) * mb_advantages)
                                 )
                         # Entropy loss
                         e_loss = tf.reduce_mean(entropy)
-                        loss = p_loss - entropy_coef * e_loss
+                        # loss = p_loss - entropy_coef * e_loss
                     # minimal policy loss and value loss, but maximal entropy loss, maximal entropy will let the agent explore more
                     # print('p_loss', p_loss)
                     # print('e_loss', e_loss)
@@ -328,11 +339,12 @@ if __name__ == '__main__':
             state, _ = env.reset()
             # episode_reward = env.total_reward_scale
             episode_reward = 0
-            for step in range(300):
+            for step in range(200):
+                if RENDER:
+                    env.render()
                 action, logprob, _, value = agent.get_action_and_value(state, greedy=True)
                 state, reward, terminated, truncated, info = env.step(action[0])
-                current = 3 * action + 3
-                epsiode_action.append(current)
+                epsiode_action.append(action)
                 episode_reward += reward
                 if terminated:
                     print('terminated')
@@ -346,7 +358,7 @@ if __name__ == '__main__':
                 os.makedirs('image')
             plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID, 'test'])))
 
-            env.draw()
+            # env.draw()
             print('Reward: ', episode_reward)
             
     if args.random:
