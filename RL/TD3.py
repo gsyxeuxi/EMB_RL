@@ -380,7 +380,7 @@ if __name__ == '__main__':
                     action = agent.policy_net.get_action(state, EXPLORE_NOISE_SCALE)
                 else:
                     action = agent.policy_net.sample_action()
-
+                print(action)
                 next_state, reward, done, _, _ = env.step(action)
                 # next_state = next_state.astype(np.float32)
                 done = 1 if done is True else 0
