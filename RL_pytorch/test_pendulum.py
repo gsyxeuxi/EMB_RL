@@ -149,7 +149,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     model_path = f"runs/{run_name}/{'pendelum'}.pth"
     # model_path = f"{'pendelum'}.pth"
-    eval_episodes = 10
+    eval_episodes = 1
     envs = gym.vector.SyncVectorEnv([make_env(args.gym_id, 0, False, run_name=f"{run_name}-eval")])
     agent = Agent(envs).to(device)
     agent.load_state_dict(torch.load(model_path, map_location=device))
