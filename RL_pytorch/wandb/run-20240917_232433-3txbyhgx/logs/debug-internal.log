@@ -1,0 +1,22 @@
+{"time":"2024-09-17T23:24:33.6302732+02:00","level":"INFO","msg":"using version","core version":"0.18.0"}
+{"time":"2024-09-17T23:24:33.6302732+02:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\wandb\\run-20240917_232433-3txbyhgx\\logs\\debug-core.log"}
+{"time":"2024-09-17T23:24:33.6313597+02:00","level":"INFO","msg":"using version","core version":"0.18.0"}
+{"time":"2024-09-17T23:24:33.6313597+02:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\wandb\\run-20240917_232433-3txbyhgx\\logs\\debug-core.log"}
+{"time":"2024-09-17T23:24:33.646327+02:00","level":"INFO","msg":"created new stream","id":"3txbyhgx"}
+{"time":"2024-09-17T23:24:33.646327+02:00","level":"INFO","msg":"stream: started","id":"3txbyhgx"}
+{"time":"2024-09-17T23:24:33.646327+02:00","level":"INFO","msg":"sender: started","stream_id":{"value":"3txbyhgx"}}
+{"time":"2024-09-17T23:24:33.646327+02:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"3txbyhgx"}}
+{"time":"2024-09-17T23:24:33.646327+02:00","level":"INFO","msg":"handler: started","stream_id":{"value":"3txbyhgx"}}
+{"time":"2024-09-17T23:24:34.2482606+02:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-09-17T23:24:34.2526486+02:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-09-17T23:24:34.2557789+02:00","level":"ERROR","msg":"git repo not found","error":"repository does not exist"}
+{"time":"2024-09-17T23:24:44.3687743+02:00","level":"INFO","msg":"tensorboard: no root directory after 10 seconds, using working directory"}
+{"time":"2024-09-17T23:24:44.3714547+02:00","level":"ERROR","msg":"tensorboard: error creating symlink","target":"C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\runs\\EMB-fv__PPO_fv__1__1726608271\\events.out.tfevents.1726608274.LAPTOP-81FDSQ7Q.13276.0","symlink":"C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\wandb\\run-20240917_232433-3txbyhgx\\files\\runs\\EMB-fv__PPO_fv__1__1726608271\\events.out.tfevents.1726608274.LAPTOP-81FDSQ7Q.13276.0","error":"symlink C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\runs\\EMB-fv__PPO_fv__1__1726608271\\events.out.tfevents.1726608274.LAPTOP-81FDSQ7Q.13276.0 C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\wandb\\run-20240917_232433-3txbyhgx\\files\\runs\\EMB-fv__PPO_fv__1__1726608271\\events.out.tfevents.1726608274.LAPTOP-81FDSQ7Q.13276.0: A required privilege is not held by the client."}
+{"time":"2024-09-17T23:37:04.8087041+02:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-09-17T23:45:14.2443282+02:00","level":"INFO","msg":"stream: closing","id":"3txbyhgx"}
+{"time":"2024-09-17T23:45:14.2443282+02:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-09-17T23:45:14.2443282+02:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-09-17T23:45:17.2462039+02:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"3txbyhgx"}}
+{"time":"2024-09-17T23:45:17.2462039+02:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"3txbyhgx"}}
+{"time":"2024-09-17T23:45:17.2462039+02:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"3txbyhgx"}}
+{"time":"2024-09-17T23:45:17.2467575+02:00","level":"INFO","msg":"stream: closed","id":"3txbyhgx"}

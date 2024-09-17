@@ -1,0 +1,27 @@
+2024-09-17 23:24:33,602 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Current SDK version is 0.18.0
+2024-09-17 23:24:33,602 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Configure stats pid to 13276
+2024-09-17 23:24:33,602 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Loading settings from C:\Users\Markus Guo\.config\wandb\settings
+2024-09-17 23:24:33,602 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Loading settings from C:\Users\Markus Guo\OneDrive\MA\EMB_RL\rl_pytorch\wandb\settings
+2024-09-17 23:24:33,602 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Loading settings from environment variables: {}
+2024-09-17 23:24:33,602 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Applying setup settings: {'_disable_service': False}
+2024-09-17 23:24:33,618 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Inferring run settings from compute environment: {'program_relpath': 'rl_pytorch\\PPO_fv.py', 'program_abspath': 'C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\PPO_fv.py', 'program': 'C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\PPO_fv.py'}
+2024-09-17 23:24:33,619 INFO    MainThread:13276 [wandb_setup.py:_flush():77] Applying login settings: {}
+2024-09-17 23:24:33,619 INFO    MainThread:13276 [wandb_init.py:_log_setup():525] Logging user logs to C:\Users\Markus Guo\OneDrive\MA\EMB_RL\rl_pytorch\wandb\run-20240917_232433-3txbyhgx\logs\debug.log
+2024-09-17 23:24:33,620 INFO    MainThread:13276 [wandb_init.py:_log_setup():526] Logging internal logs to C:\Users\Markus Guo\OneDrive\MA\EMB_RL\rl_pytorch\wandb\run-20240917_232433-3txbyhgx\logs\debug-internal.log
+2024-09-17 23:24:33,620 INFO    MainThread:13276 [wandb_init.py:init():609] calling init triggers
+2024-09-17 23:24:33,620 INFO    MainThread:13276 [wandb_init.py:init():616] wandb.init called with sweep_config: {}
+config: {'exp_name': 'PPO_fv', 'env_id': 'EMB-fv', 'learning_rate': 0.001, 'seed': 1, 'total_timesteps': 500000, 'torch_deterministic': True, 'cuda': True, 'track': True, 'wandb_project_name': 'emb-ppo', 'wandb_entity': None, 'capture_video': False, 'save_model': True, 'test_model': True, 'num_envs': 4, 'num_steps': 2048, 'anneal_lr': True, 'gae': True, 'gamma': 0.99, 'gae_lambda': 0.95, 'num_minibatches': 32, 'update_epochs': 10, 'norm_adv': True, 'clip_coef': 0.2, 'clip_vloss': False, 'ent_coef': 0.0, 'vf_coef': 0.5, 'max_grad_norm': 0.5, 'target_kl': None, 'batch_size': 8192, 'minibatch_size': 256}
+2024-09-17 23:24:33,620 INFO    MainThread:13276 [wandb_init.py:init():659] starting backend
+2024-09-17 23:24:33,620 INFO    MainThread:13276 [wandb_init.py:init():663] setting up manager
+2024-09-17 23:24:33,624 INFO    MainThread:13276 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=spawn, using: spawn
+2024-09-17 23:24:33,628 INFO    MainThread:13276 [wandb_init.py:init():671] backend started and connected
+2024-09-17 23:24:33,637 INFO    MainThread:13276 [wandb_init.py:init():766] updated telemetry
+2024-09-17 23:24:33,687 INFO    MainThread:13276 [wandb_init.py:init():799] communicating run to backend with 90.0 second timeout
+2024-09-17 23:24:34,239 INFO    MainThread:13276 [wandb_init.py:init():850] starting run threads in backend
+2024-09-17 23:24:34,354 INFO    MainThread:13276 [wandb_run.py:_console_start():2466] atexit reg
+2024-09-17 23:24:34,354 INFO    MainThread:13276 [wandb_run.py:_redirect():2312] redirect: wrap_raw
+2024-09-17 23:24:34,355 INFO    MainThread:13276 [wandb_run.py:_redirect():2377] Wrapping output streams.
+2024-09-17 23:24:34,355 INFO    MainThread:13276 [wandb_run.py:_redirect():2402] Redirects installed.
+2024-09-17 23:24:34,356 INFO    MainThread:13276 [wandb_init.py:init():893] run started, returning control to user process
+2024-09-17 23:24:34,356 INFO    MainThread:13276 [wandb_run.py:_tensorboard_callback():1555] tensorboard callback: runs/EMB-fv__PPO_fv__1__1726608271, True
+2024-09-17 23:45:14,244 WARNING MsgRouterThr:13276 [router.py:message_loop():77] message_loop has been closed

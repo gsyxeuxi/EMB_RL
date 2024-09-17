@@ -1,0 +1,35 @@
+{
+  "os": "Windows-10-10.0.19045-SP0",
+  "python": "3.12.5",
+  "startedAt": "2024-09-17T21:24:33.628703Z",
+  "args": [
+    "--track=True"
+  ],
+  "program": "C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch\\PPO_fv.py",
+  "codePath": "rl_pytorch\\PPO_fv.py",
+  "git": {
+    "remote": "https://github.com/gsyxeuxi/EMB_RL.git",
+    "commit": "df427ea5a8e8272de81e4ea54727502bba46c34f"
+  },
+  "email": "markusguo1996@gmail.com",
+  "root": "C:\\Users\\Markus Guo\\OneDrive\\MA\\EMB_RL\\rl_pytorch",
+  "host": "LAPTOP-81FDSQ7Q",
+  "username": "Markus Guo",
+  "executable": "D:\\Anaconda\\envs\\rl\\python.exe",
+  "codePathLocal": "PPO_fv.py",
+  "cpu_count": 8,
+  "cpu_count_logical": 16,
+  "disk": {
+    "/": {
+      "total": "107374178304",
+      "used": "100283465728"
+    }
+  },
+  "memory": {
+    "total": "17042837504"
+  },
+  "cpu": {
+    "count": 8,
+    "countLogical": 16
+  }
+}

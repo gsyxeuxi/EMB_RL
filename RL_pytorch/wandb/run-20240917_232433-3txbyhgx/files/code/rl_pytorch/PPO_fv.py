@@ -334,28 +334,16 @@ if __name__ == "__main__":
 
 
     if args.test_model:
-        eval_episodes = 2
-        envs = gym.vector.SyncVectorEnv([make_env(args.env_id, 0, run_name=f"{run_name}-eval")])
+        eval_episodes = 10
+        envs = gym.vector.SyncVectorEnv([make_env(args.env_id, 0, False, run_name=f"{run_name}-eval")])
         agent = Agent(envs).to(device)
         agent.load_state_dict(torch.load(model_path, map_location=device))
         agent.eval()
 
         obs, _ = envs.reset()
         episodic_returns = []
-
-        env_test = EMB_env_fv.EMB_All_info_Env()
-        env_test.reset()
-        total_reward_test = 0
-
         while len(episodic_returns) < eval_episodes:
             actions, _, _, _ = agent.get_action_and_value(torch.Tensor(obs).to(device))
-
-            action = np.clip(actions.item(), -1, 1)
-            next_obs_test, reward_test, terminations, truncations, _ = env_test.step(action)
-            print(terminations, truncations)
-            total_reward_test += reward_test
-            print(total_reward_test)
-
             next_obs, _, _, _, infos = envs.step(actions.cpu().numpy())
             if "final_info" in infos:
                 for info in infos["final_info"]:

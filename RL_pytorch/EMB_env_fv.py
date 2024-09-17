@@ -101,7 +101,7 @@ class EMB_All_info_Env(gym.Env):
         u = self.action_fact * (action[0] + self.max_action) #input current
         dx = self.fi_matrix.f(x, u, self.theta)
         x = x + self._dt * dx
-        x0_new, x1_new = x #for plot
+        x0_new, x1_new = x[0].item(), x[1].item() #for plot
         jacobian = self.fi_matrix.jacobian(x, u)
         J_f = jacobian[0]
         J_h = self.fi_matrix.jacobian_h(x)
@@ -143,7 +143,6 @@ class EMB_All_info_Env(gym.Env):
             self.reward = step_reward - 50 * (x0_new - self.dangerous_position) ** 2
         else:
             self.reward = step_reward
-        
         self.count += 1
         terminated = self.terminated
 
@@ -154,7 +153,6 @@ class EMB_All_info_Env(gym.Env):
         # for drawing
         self.position_buffer.append(x0_new)
         self.velocity_buffer.append(x1_new)
-        
         return self._get_obs(), self.reward, terminated, truncated, {}
     
     def render(self, mode='human'):
@@ -183,7 +181,7 @@ class EMB_All_info_Env(gym.Env):
 
 # env = EMB_All_info_Env()
 # env.reset()
-# for k in range(100):
+# for k in range(3):
 #     u = [-1/3]
 #     next_obs, reward, terminations, truncations, infos = env.step(u)
-#     print(reward)
+
