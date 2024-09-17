@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
+import EMB_env_fv
 
 
 def parse_args():
@@ -18,13 +19,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
         help="the name of this experiment")
-    parser.add_argument("--gym-id", type=str, default="Pendulum-v1",
-        help="the id of the gym environment")
-    parser.add_argument("--learning-rate", type=float, default=3e-4,
+    parser.add_argument("--env-id", type=str, default="EMB-fv",
+        help="the id of the environment")
+    parser.add_argument("--learning-rate", type=float, default=1e-3,
         help="the learning rate of the optimizer")
     parser.add_argument("--seed", type=int, default=1,
         help="seed of the experiment")
-    parser.add_argument("--total-timesteps", type=int, default=100000,
+    parser.add_argument("--total-timesteps", type=int, default=500000,
         help="total timesteps of the experiments")
     parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="if toggled, `torch.backends.cudnn.deterministic=False`")
@@ -32,7 +33,7 @@ def parse_args():
         help="if toggled, cuda will be enabled by default")
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="ppo-implementation-details",
+    parser.add_argument("--wandb-project-name", type=str, default="EMB_fv-implementation-details",
         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
         help="the entity (team) of wandb's project")
@@ -56,7 +57,7 @@ def parse_args():
         help="the discount factor gamma")
     parser.add_argument("--gae-lambda", type=float, default=0.95,
         help="the lambda for the general advantage estimation")
-    parser.add_argument("--num-minibatches", type=int, default=64,
+    parser.add_argument("--num-minibatches", type=int, default=32,
         help="the number of mini-batches")
     parser.add_argument("--update-epochs", type=int, default=10,
         help="the K epochs to update the policy")
@@ -81,23 +82,15 @@ def parse_args():
     return args
 
 
-def make_env(env_id, idx, capture_video, run_name):
+def make_env(env_id, idx, run_name):
     def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id)
-
+        env = EMB_env_fv.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        # env = gym.wrappers.ClipAction(env)
-        # env = gym.wrappers.NormalizeObservation(env)
-        # env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+        env = gym.wrappers.ClipAction(env)
+        env = gym.wrappers.NormalizeObservation(env)
+        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         # env = gym.wrappers.NormalizeReward(env)
         # env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        # env.seed(seed)
-        # env.action_space.seed(seed)
-        # env.observation_space.seed(seed)
         return env
 
     return thunk
@@ -143,7 +136,7 @@ class Agent(nn.Module):
 
 if __name__ == "__main__":
     args = parse_args()
-    run_name = f"{args.gym_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
         import wandb
 
@@ -172,7 +165,7 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.gym_id, i, args.capture_video, run_name) for i in range(args.num_envs)]
+        [make_env(args.env_id, i, run_name) for i in range(args.num_envs)]
     )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
@@ -216,6 +209,7 @@ if __name__ == "__main__":
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+            print(reward)
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
@@ -342,7 +336,7 @@ if __name__ == "__main__":
 
     if args.test_model:
         eval_episodes = 10
-        envs = gym.vector.SyncVectorEnv([make_env(args.gym_id, 0, False, run_name=f"{run_name}-eval")])
+        envs = gym.vector.SyncVectorEnv([make_env(args.env_id, 0, False, run_name=f"{run_name}-eval")])
         agent = Agent(envs).to(device)
         agent.load_state_dict(torch.load(model_path, map_location=device))
         agent.eval()
