@@ -73,7 +73,7 @@ class EMB_All_info_Env(gym.Env):
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.state = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        self.state = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64) #add fv
         self.count = 0
         observation = self._get_obs()
 
@@ -97,8 +97,7 @@ class EMB_All_info_Env(gym.Env):
         # x0, x1, k, s1, s2, s3, s4 = self._get_obs() #state from last lime
         x0, x1, k, sv = self._get_obs() #state from last lime
         x = torch.tensor([x0, x1], dtype=torch.float64)
-        # action = np.clip(action, -1, 1)
-        u = self.action_fact * (action[0] + self.max_action) #input current
+        u = self.action_fact * (action.item() + self.max_action) #input current
         dx = self.fi_matrix.f(x, u, self.theta)
         x = x + self._dt * dx
         x0_new, x1_new = x[0].item(), x[1].item() #for plot
