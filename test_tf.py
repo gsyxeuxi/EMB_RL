@@ -1,63 +1,18 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow as tf
 
-class FI_matrix(object):
+# 给定的列表
+data = [
+    {'mean': np.array([  4.13504895, 256.95893701,  23.97084015,  20.92815814]), 'var': np.array([1.51370965e+01, 2.22188703e+04, 2.15600983e+02, 2.58641465e+03])},
+    {'mean': np.array([  4.50869605, 262.62242172,  25.31530979,  30.53526957]), 'var': np.array([1.77183573e+01, 2.18258115e+04, 2.49199641e+02, 5.62051651e+03])},
+    {'mean': np.array([  4.58043361, 263.31004028,  25.65246407,  36.44243515]), 'var': np.array([1.93361919e+01, 2.26624754e+04, 2.54117631e+02, 1.32460989e+04])},
+    {'mean': np.array([  4.7101263 , 270.32372202,  25.36602749,  31.94816624]), 'var': np.array([1.85665279e+01, 2.20412917e+04, 2.40955516e+02, 5.41899946e+03])}
+]
 
-    def __init__(self) -> None:
-        # Define parameters
-        self.J = 4.624e-06  # Moment of inertia
-        self.km = 21.7e-03  # Motor constant
-        self.gamma = 1.889e-05  # Proportional constant
-        self.k1 = 23.04  # Elasticity constant
-        self.fc = 10.37e-3  # Coulomb friction coefficient
-        self.epsilon = 0.5  # Zero velocity bound [rad/s]
-        self.fv = 2.16e-5  # Viscous friction coefficient
-        self.Ts = 1.0 * (self.fc + self.fv * self.epsilon) # Static friction torque
-        self.dt = 0.001
-        self.theta_tensor = tf.convert_to_tensor([self.km, self.k1, self.fc, self.fv, self.Ts], dtype=tf.float64)
+# 提取所有 'mean' 数组
+means = [item['mean'] for item in data]
 
-    def T_s(self, x2, theta):
-        km, k1, fc, fv, Ts = tf.unstack(theta)
+# 计算平均值
+mean_avg = np.mean(means, axis=0)
 
-        Ts_1  = ((fc * tf.sign(x2) + fv * x2) / self.epsilon) * tf.minimum(tf.abs(x2), self.epsilon)
-        Ts_2 = fc * tf.sign(x2) * tf.minimum(tf.abs(x2), self.epsilon) + fv * x2
-        return Ts_1, Ts_2
-
-# Instantiate the FI_matrix class
-fi_matrix = FI_matrix()
-theta = tf.constant([21.7e-03, 23.04, 10.37e-3, 2.16e-5, 1.2 * (10.37e-3 + 2.16e-5 * 0.5)], dtype=tf.float64)
-# Generate x2 values
-x2_values = np.linspace(-10, 10, 500)
-
-# Convert x2_values to TensorFlow tensor
-x2_tensor = tf.convert_to_tensor(x2_values, dtype=tf.float64)
-
-# Calculate Ts_1 and Ts_2
-Ts_1, Ts_2 = fi_matrix.T_s(x2_tensor, theta)
-
-# Convert Ts_1 and Ts_2 to NumPy arrays for plotting
-Ts_1_values = Ts_1.numpy()
-Ts_2_values = Ts_2.numpy()
-
-# Plot Ts_1 and Ts_2
-plt.figure(figsize=(12, 6))
-
-plt.subplot(1, 2, 1)
-plt.plot(x2_values, Ts_1_values, label='Ts_1')
-plt.xlabel('x2')
-plt.ylabel('Ts_1')
-plt.title('Ts_1 vs x2')
-plt.grid(True)
-plt.legend()
-
-plt.subplot(1, 2, 2)
-plt.plot(x2_values, Ts_2_values, label='Ts_2')
-plt.xlabel('x2')
-plt.ylabel('Ts_2')
-plt.title('Ts_2 vs x2')
-plt.grid(True)
-plt.legend()
-
-plt.tight_layout()
-plt.show()
+# 输出平均值
+print(mean_avg)
