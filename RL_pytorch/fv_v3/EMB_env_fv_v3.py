@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 import time
 import torch
+import math
 import random
 from EMB_model_fv import FI_matrix
 import matplotlib
@@ -140,7 +141,7 @@ class EMB_All_info_Env(gym.Env):
         # self.state = np.array([x0_new, x1_new, k_new, s1_new, s2_new, s3_new, s4_new], dtype=np.float64)
         # ************calculate the rewards************
         if not self.is_safe:
-            self.reward = -4e4
+            self.reward = -4e5
         elif self.is_dangerous:
             self.reward = step_reward - 50 * (x0_new - self.dangerous_position) ** 2
         else:
@@ -183,7 +184,11 @@ class EMB_All_info_Env(gym.Env):
 
 # env = EMB_All_info_Env()
 # env.reset()
-# for k in range(3):
-#     u = [-1/3]
+# total_reward = 0
+# for k in range(300):
+#     u = 0
 #     next_obs, reward, terminations, truncations, infos = env.step(u)
+#     total_reward += reward
+# print(total_reward)
+
 

@@ -122,33 +122,33 @@ class FI_matrix(object):
         except np.linalg.LinAlgError:
             return False
 
-# # Initial state
-# x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
-# chi = torch.zeros((2, 1), dtype=torch.float64)
-# # fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
-# fi_info = torch.zeros((1,1), dtype=torch.float64)
-# det_T = 0.001  # Time step
-# theta = torch.tensor([2.16e-5], dtype=torch.float64)
+# Initial state
+x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
+chi = torch.zeros((2, 1), dtype=torch.float64)
+# fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
+fi_info = torch.zeros((1,1), dtype=torch.float64)
+det_T = 0.001  # Time step
+theta = torch.tensor([2.16e-5], dtype=torch.float64)
 
-# fi_matrix = FI_matrix()
-# x = x_0
-# pi = torch.tensor(math.pi, dtype=torch.float64)
-# scale_factor = 1.0
-# scale_factor_previous = 1.0
-# det_init = torch.det(fi_info)
-# fi_info_scale = fi_info * scale_factor
-# fi_info_previous_scale = fi_info_scale
-# det_previous_scale = torch.det(fi_info_previous_scale)
-# log_det_previous_scale = torch.log(det_previous_scale)
-# total_reward_scale = log_det_previous_scale
+fi_matrix = FI_matrix()
+x = x_0
+pi = torch.tensor(math.pi, dtype=torch.float64)
+scale_factor = 1.0
+scale_factor_previous = 1.0
+det_init = torch.det(fi_info)
+fi_info_scale = fi_info * scale_factor
+fi_info_previous_scale = fi_info_scale
+det_previous_scale = torch.det(fi_info_previous_scale)
+log_det_previous_scale = torch.log(det_previous_scale)
+total_reward_scale = log_det_previous_scale
 
 # # Start the simulation
 # for k in range(300):  # 350 = 0.35s
-#     u = torch.tensor(2 + 2 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
+#     u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
 #     # u = 2
 #     dx = fi_matrix.f(x, u, theta)
 #     x = x + det_T * dx
-#     # print('x', x)
+#     print('x', x)
 #     J_f, df_theta = fi_matrix.jacobian(x, u)
 #     J_h = fi_matrix.jacobian_h(x)
 #     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)

@@ -415,7 +415,7 @@ if __name__ == "__main__":
         }, model_path)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v3__PPO_fv_v3__1__20240924-144703/PPO_fv_v3.pth"
+        # model_path = f"runs/EMB-fv-v3__PPO_fv_v3__1__20240924-230744/PPO_fv_v3.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -424,7 +424,6 @@ if __name__ == "__main__":
 
         checkpoint = torch.load(model_path, map_location=device)
         
-
         obs_rms_list = checkpoint.get('obs_rms_list', [])
         # rew_rms_list = checkpoint.get('rew_rms_list', [])
         
