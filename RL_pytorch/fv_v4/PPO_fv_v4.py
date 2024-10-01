@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
-import EMB_env_fv
+import EMB_env_fv_v4
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
@@ -23,7 +23,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
         help="the name of this experiment")
-    parser.add_argument("--env-id", type=str, default="EMB-fv",
+    parser.add_argument("--env-id", type=str, default="EMB-fv-v4",
         help="the id of the environment")
     parser.add_argument("--learning-rate", type=float, default=1e-3,
         help="the learning rate of the optimizer")
@@ -90,7 +90,7 @@ def parse_args():
 
 def make_env(env_id, idx, run_name):
     def thunk():
-        env = EMB_env_fv.EMB_All_info_Env()
+        env = EMB_env_fv_v4.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
@@ -102,7 +102,7 @@ def make_env(env_id, idx, run_name):
 
 def make_env_test(env_id, idx, run_name):
     def thunk():
-        env = EMB_env_fv.EMB_All_info_Env()
+        env = EMB_env_fv_v4.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         return env
@@ -415,7 +415,7 @@ if __name__ == "__main__":
         }, model_path)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv__PPO_fv__1__20240923-100018/PPO_fv.pth"
+        model_path = f"runs/EMB-fv-v4__PPO_fv_v4__1__20240930-115752/PPO_fv_v4.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -424,7 +424,6 @@ if __name__ == "__main__":
 
         checkpoint = torch.load(model_path, map_location=device)
         
-
         obs_rms_list = checkpoint.get('obs_rms_list', [])
         # rew_rms_list = checkpoint.get('rew_rms_list', [])
         
@@ -438,7 +437,8 @@ if __name__ == "__main__":
         agent = Agent(env_test).to(device)
         agent.load_state_dict(checkpoint['model_state_dict'])
         agent.eval()
-        next_obs, _ = env_test.reset()
+
+        next_obs, _ = env_test.reset(seed=args.seed+4)
         next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
         episodic_returns = []
         cont = 1
@@ -463,23 +463,22 @@ if __name__ == "__main__":
             action_buffer.append(3 * (np.clip(actions.item(), -1, 1) + 1))
             reward_buffer.append(total_reward_test)    
 
-            next_obs_norm =  (next_obs - obs_rms.mean) / np.sqrt(obs_rms.var + 1e-8)
+            next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
    
             if "final_info" in infos:
                 position_buffers.append(position_buffer)
                 velocity_buffers.append(velocity_buffer)
                 action_buffers.append(action_buffer)
                 reward_buffers.append(reward_buffer)
-                # for idx, action in enumerate(action_buffer):
-                #     writer.add_scalar(f"eval/action_each_step_{cont}", action, idx)
-                # for idx, total_reward_test in enumerate(reward_buffer):
-                #     writer.add_scalar(f"eval/total_reward_each_step_{cont}", total_reward_test, idx)
-                # for idx, position in enumerate(position_buffer):
-                #     writer.add_scalar(f"eval/position_each_step_{cont}", position, idx)
-                # for idx, velocity in enumerate(velocity_buffer):
-                #     writer.add_scalar(f"eval/velocity_each_step_{cont}", velocity, idx)
+                for idx, action in enumerate(action_buffer):
+                    writer.add_scalar(f"eval/action_each_step_{cont}", action, idx)
+                for idx, total_reward_test in enumerate(reward_buffer):
+                    writer.add_scalar(f"eval/total_reward_each_step_{cont}", total_reward_test, idx)
+                for idx, position in enumerate(position_buffer):
+                    writer.add_scalar(f"eval/position_each_step_{cont}", position, idx)
+                for idx, velocity in enumerate(velocity_buffer):
+                    writer.add_scalar(f"eval/velocity_each_step_{cont}", velocity, idx)
 
-                env_test.reset()
                 cont += 1
                 total_reward_test = 0
                 position_buffer = [0.0]
@@ -495,8 +494,8 @@ if __name__ == "__main__":
         for idx, episodic_return in enumerate(episodic_returns):
             writer.add_scalar("eval/episodic_return", episodic_return, idx)
 
-        # draw(position_buffers, velocity_buffers)
-        # draw_action_reward(action_buffers, reward_buffers)
+        draw(position_buffers, velocity_buffers)
+        draw_action_reward(action_buffers, reward_buffers)
 
     envs.close()
     writer.close()

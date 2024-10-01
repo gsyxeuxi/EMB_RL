@@ -4,6 +4,8 @@ from typing import Optional
 import numpy as np
 import time
 import torch
+import math
+import random
 from EMB_model_fv import FI_matrix
 import matplotlib
 import matplotlib.pyplot as plt
@@ -11,8 +13,7 @@ matplotlib.use('Agg')
 '''
 EMB_env_fv:
 real value of x1 and x2 in obs
-fixed fv and no fv in obs
-
+nominal fv and fv in obs
 '''
 
 class EMB_All_info_Env(gym.Env):
@@ -30,22 +31,18 @@ class EMB_All_info_Env(gym.Env):
         self.T_last = 0
         self.max_action = 1 # action space normalizaton
         self.action_fact = 3 # restore action space to (0, 6)
-
-        
-        # self.theta = torch.tensor([2.16e-5], dtype=torch.float64) #[self.fv]
-        self.theta = 2.16e-5
         self.position_range = (-100, 100)
         self.velocity_range = (-500, 500)
-        self.dangerous_position = 75
         self.fv_range_high = 5e-5
         self.fv_range_low = 1e-5
+        self.dangerous_position = 75
         self.reset_num = 0
         # *************************************************** Define the Observation Space ***************************************************
         """
-        An 13-Dim Space: [motor position theta, motor velocity omega, time setp index k, FIM element]
+        An 13-Dim Space: [motor position theta, time setp index k, fv, FIM element]
         """
-        high = np.array([100, 500, 400, 1e10], dtype=np.float64)
-        self.observation_space = gym.spaces.Box(low=-high, high=high, shape=(4,), dtype=np.float64)   
+        high = np.array([100, 500, 400, 5e-5, 1e10], dtype=np.float64)
+        self.observation_space = gym.spaces.Box(low=-high, high=high, shape=(5,), dtype=np.float64)   
 
         # *************************************************** Define the Action Space ***************************************************
         """
@@ -75,26 +72,29 @@ class EMB_All_info_Env(gym.Env):
         return self.state
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
+        random.seed(seed)
         super().reset(seed=seed)
-        self.state = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64) #add fv
+        self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64) #add fv
+
+        # self.state[3] = 2.16e-5
+        # if the fv increase continiues
+        self.state[3] = self.fv_range_low + self.reset_num * 1e-6
+        self.reset_num += 1
+        # print(self.state[3])
+        
         self.count = 0
         observation = self._get_obs()
-
-        # # for test of the policy with differnt fv
-        # self.theta = self.fv_range_low + self.reset_num * 1e-6
-        # self.reset_num += 1
-        # print(self.theta)
 
         self.chi = torch.zeros((2, 1), dtype=torch.float64)
         self.scale_factor = 1
         self.scale_factor_previous = 1
         self.fi_info = torch.zeros((1,1), dtype=torch.float64)
         self.det_init = torch.det(self.fi_info)
-        self.fi_info_scale = self.fi_info * self.scale_factor
-        self.fi_info_previous_scale = self.fi_info_scale
-        det_previous_scale = torch.det(self.fi_info_previous_scale)
-        self.log_det_previous_scale = torch.log(det_previous_scale)
-        self.total_reward_scale = self.log_det_previous_scale
+        # self.fi_info_scale = self.fi_info * self.scale_factor
+        # self.fi_info_previous_scale = self.fi_info_scale
+        # det_previous_scale = torch.det(self.fi_info_previous_scale)
+        # self.log_det_previous_scale = torch.log(det_previous_scale)
+        # self.total_reward_scale = self.log_det_previous_scale
 
         self.position_buffer = [0.0]
         self.velocity_buffer = [0.0]
@@ -103,14 +103,13 @@ class EMB_All_info_Env(gym.Env):
     def step(self, action):
         # ************get observation space:************
         # x0, x1, k, s1, s2, s3, s4 = self._get_obs() #state from last lime
-        x0, x1, k, sv = self._get_obs() #state from last lime
+        x0, x1, k, theta, sv = self._get_obs() #state from last lime
         x = torch.tensor([x0, x1], dtype=torch.float64)
         u = self.action_fact * (action.item() + self.max_action) #input current
-        dx = self.fi_matrix.f(x, u, torch.tensor([self.theta], dtype=torch.float64))
+        dx = self.fi_matrix.f(x, u, torch.tensor([theta], dtype=torch.float64))
         x = x + self._dt * dx
         x0_new, x1_new = x[0].item(), x[1].item() #for plot
-
-        jacobian = self.fi_matrix.jacobian(x, u, torch.tensor([self.theta], dtype=torch.float64))
+        jacobian = self.fi_matrix.jacobian(x, u, torch.tensor([theta], dtype=torch.float64))
         J_f = jacobian[0]
         J_h = self.fi_matrix.jacobian_h(x)
         df_theta = jacobian[1]
@@ -119,8 +118,8 @@ class EMB_All_info_Env(gym.Env):
         fi_info_new = self.fi_matrix.fisher_info_matrix(dh_theta)
         step_reward = fi_info_new.item()
         self.fi_info += fi_info_new
-        fi_info_new_scale = fi_info_new * self.scale_factor
-        self.fi_info_scale = self.fi_info_previous_scale + fi_info_new_scale
+        # fi_info_new_scale = fi_info_new * self.scale_factor
+        # self.fi_info_scale = self.fi_info_previous_scale + fi_info_new_scale
         
         # FIM_upper_triangle = []
         # for i in range(np.array(self.fi_info_scale).shape[0]):
@@ -130,19 +129,21 @@ class EMB_All_info_Env(gym.Env):
         # s1_new, s2_new, s3_new, s4_new = upper_triangle_elements[:]
 
         # self.fi_matrix.symmetrie_test(self.fi_info_scale)
-        det_fi_scale = torch.det(self.fi_info_scale)
-        log_det_scale = torch.log(det_fi_scale)
-        step_reward_scale = log_det_scale - self.log_det_previous_scale
-        self.scale_factor = (self.det_init / det_fi_scale) ** (1/4)
-        self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
-        self.log_det_previous_scale = torch.slogdet(self.fi_info_previous_scale)[1]
-        self.scale_factor_previous = self.scale_factor
+        # det_fi_scale = torch.det(self.fi_info_scale)
+        # log_det_scale = torch.log(det_fi_scale)
+        # step_reward_scale = log_det_scale - self.log_det_previous_scale
+        # self.scale_factor = (self.det_init / det_fi_scale) ** (1/4)
+        # self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
+        # self.log_det_previous_scale = torch.slogdet(self.fi_info_previous_scale)[1]
+        # self.scale_factor_previous = self.scale_factor
 
         k_new = k + 1
         #update the state
-        self.state[:2] = x0_new, x1_new
+        self.state[0] = x0_new
+        self.state[1] = x1_new
         self.state[2] = k_new
         self.state[-1] = self.fi_info
+
         # self.state = np.array([x0_new, x1_new, k_new, s1_new, s2_new, s3_new, s4_new], dtype=np.float64)
         # ************calculate the rewards************
         if not self.is_safe:
@@ -189,7 +190,11 @@ class EMB_All_info_Env(gym.Env):
 
 # env = EMB_All_info_Env()
 # env.reset()
-# for k in range(3):
-#     u = [-1/3]
+# total_reward = 0
+# for k in range(300):
+#     u = 0
 #     next_obs, reward, terminations, truncations, infos = env.step(u)
+#     total_reward += reward
+# print(total_reward)
+
 

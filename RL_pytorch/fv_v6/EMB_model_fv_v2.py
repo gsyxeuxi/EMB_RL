@@ -4,6 +4,14 @@ import torch
 from torch.distributions.normal import Normal
 import math
 
+
+"""
+add:
+h(x) = [[x1], [x2]]
+self.R_inv = torch.tensor([[1e6, 0],[0, 1]], dtype=torch.float64)
+"""
+
+
 class FI_matrix(object):
     
     def __init__(self):
@@ -16,6 +24,7 @@ class FI_matrix(object):
         self.epsilon = 0.5  # Zero velocity bound [rad/s]
         self.fv = torch.tensor([2.16e-5], dtype=torch.float64)  # Viscous friction coefficient
         self.dt = 0.001
+        self.R_inv = torch.tensor([[1e6, 0],[0, 1]], dtype=torch.float64) # Invers matrix of the sensor noise
 
     def f(self, x, u, theta):
         x1, x2 = x[0], x[1]
@@ -39,7 +48,8 @@ class FI_matrix(object):
         output:
             y: motor position
         """
-        return x[0]
+        # return x[0]
+        return torch.stack([x[0], x[1]])
 
     def jacobian_h(self, x):
         """
@@ -47,11 +57,11 @@ class FI_matrix(object):
         y = h(x)
         output: J_h
         """
-        # probs = Normal(1.0, 0.05)
-        # dh_dx1 = torch.tensor([probs.sample()], dtype=torch.float64)
-        dh_dx1 = torch.tensor([1.0], dtype=torch.float64)
-        dh_dx2 = torch.tensor([0.0], dtype=torch.float64)
-        return torch.stack([dh_dx1, dh_dx2], dim=1)
+        # dh_dx1 = torch.tensor([1.0, 0], dtype=torch.float64)
+        # dh_dx2 = torch.tensor([0, 1.0], dtype=torch.float64)
+        dh_dx1 = torch.tensor([1/100, 0], dtype=torch.float64)
+        dh_dx2 = torch.tensor([0, 1/500], dtype=torch.float64)
+        return torch.stack([dh_dx1, dh_dx2])
 
     def jacobian(self, x, u, theta):
         """
@@ -100,13 +110,13 @@ class FI_matrix(object):
         dh_dtheta = torch.matmul(J_h, chi)
         return dh_dtheta
     
-    def fisher_info_matrix(self, dh_dtheta, R=0.05):
+    def fisher_info_matrix(self, dh_dtheta):
         """
         Define the fisher infomation matrix M
         M = dh_dtheta.T * (1/R) * dh_dtheta
         output: fi_info
         """
-        return torch.matmul(dh_dtheta.t(), dh_dtheta) * (1/R)
+        return torch.matmul(torch.matmul(dh_dtheta.t(), self.R_inv), dh_dtheta)
 
     def symmetrie_test(self, x):
         """

@@ -25,7 +25,7 @@ delta_s = 2.0  # Shape parameter
 J = 4.624e-06
 theta = 100
 # Velocity range for plotting
-v_values = np.linspace(-25, 1, 4000)
+v_values = np.linspace(-200, 200, 4000)
 
 # Compute the friction force for the velocity range
 # F_values = friction_force(v_values, Fc, Fv)

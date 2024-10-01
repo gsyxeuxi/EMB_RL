@@ -141,7 +141,7 @@ class EMB_All_info_Env(gym.Env):
         # self.state = np.array([x0_new, x1_new, k_new, s1_new, s2_new, s3_new, s4_new], dtype=np.float64)
         # ************calculate the rewards************
         if not self.is_safe:
-            self.reward = -4e5
+            self.reward = -4e4
         elif self.is_dangerous:
             self.reward = step_reward - 50 * (x0_new - self.dangerous_position) ** 2
         else:

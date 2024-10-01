@@ -1,18 +1,18 @@
 import numpy as np
+import torch
 
-# 给定的列表
-data = [
-    {'mean': np.array([  4.13504895, 256.95893701,  23.97084015,  20.92815814]), 'var': np.array([1.51370965e+01, 2.22188703e+04, 2.15600983e+02, 2.58641465e+03])},
-    {'mean': np.array([  4.50869605, 262.62242172,  25.31530979,  30.53526957]), 'var': np.array([1.77183573e+01, 2.18258115e+04, 2.49199641e+02, 5.62051651e+03])},
-    {'mean': np.array([  4.58043361, 263.31004028,  25.65246407,  36.44243515]), 'var': np.array([1.93361919e+01, 2.26624754e+04, 2.54117631e+02, 1.32460989e+04])},
-    {'mean': np.array([  4.7101263 , 270.32372202,  25.36602749,  31.94816624]), 'var': np.array([1.85665279e+01, 2.20412917e+04, 2.40955516e+02, 5.41899946e+03])}
-]
+# print(np.random.normal(0, 0.001))
+# print(np.random.normal(0, 1))
+R_inv = torch.tensor([[1e6, 0],[0, 1]], dtype=torch.float64)
+dh_dtheta = torch.tensor([[1], [100]], dtype=torch.float64)
+def fisher_info_matrix(dh_dtheta):
+    """
+    Define the fisher infomation matrix M
+    M = dh_dtheta.T * (1/R) * dh_dtheta
+    output: fi_info
+    """
+    # return torch.matmul(dh_dtheta.t(), dh_dtheta) * (1/R)
+    return torch.matmul(torch.matmul(dh_dtheta.t(), R_inv), dh_dtheta)
 
-# 提取所有 'mean' 数组
-means = [item['mean'] for item in data]
-
-# 计算平均值
-mean_avg = np.mean(means, axis=0)
-
-# 输出平均值
-print(mean_avg)
+a = fisher_info_matrix(dh_dtheta)
+print(a)
