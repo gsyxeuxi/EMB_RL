@@ -139,7 +139,7 @@ class FI_matrix(object):
 # # fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
 # fi_info = torch.zeros((1,1), dtype=torch.float64)
 # det_T = 0.001  # Time step
-# theta = torch.tensor([3.16e-5], dtype=torch.float64)
+# theta = torch.tensor([2.16e-5], dtype=torch.float64)
 
 # fi_matrix = FI_matrix()
 # x = x_0
@@ -154,9 +154,9 @@ class FI_matrix(object):
 # total_reward_scale = log_det_previous_scale
 
 # # Start the simulation
-# for k in range(300):  # 350 = 0.35s
+# for k in range(5):  # 350 = 0.35s
 #     u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
-#     # u = 2
+#     u = -2
 #     dx = fi_matrix.f(x, u, theta)
 #     x = x + det_T * dx
 #     J_f, df_theta = fi_matrix.jacobian(x, u, theta)
@@ -164,7 +164,7 @@ class FI_matrix(object):
 #     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
 #     # print('chi', chi)
 #     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
-#     # print('dh_theta', dh_theta)
+
 #     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
 #     # print('reward', fi_info_new)
 #     fi_info_new_scale = fi_info_new * scale_factor

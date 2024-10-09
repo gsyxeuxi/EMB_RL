@@ -23,7 +23,7 @@ class EMB_All_info_Env(gym.Env):
     def __init__(self) -> None:
         self.fi_matrix = FI_matrix()
         self._dt = 0.001
-        self.max_env_steps = 300
+        self.max_env_steps = 500
         self.count = 0 
         self.reward = None
         self.current = None # input u
@@ -32,7 +32,7 @@ class EMB_All_info_Env(gym.Env):
         self.T_last = 0
         self.max_action = 1 # action space normalizaton
         self.action_fact = 6 # restore action space to (-6, 6)
-        self.position_range = (-100, 100)
+        self.position_range = (-10, 100)
         self.velocity_range = (-500, 500)
         self.fv_range_high = 5e-5
         self.fv_range_low = 1e-5
@@ -45,7 +45,8 @@ class EMB_All_info_Env(gym.Env):
         An 13-Dim Space: [motor position theta, time setp index k, fv, FIM element]
         """
         high = np.array([100, 500, 400, 5e-5, 1e10], dtype=np.float64)
-        self.observation_space = gym.spaces.Box(low=-high, high=high, shape=(5,), dtype=np.float64)   
+        low = np.array([-10, -500, 0, 1e-5, 0], dtype=np.float64)
+        self.observation_space = gym.spaces.Box(low=low, high=high, shape=(5,), dtype=np.float64)   
 
         # *************************************************** Define the Action Space ***************************************************
         """
@@ -122,15 +123,15 @@ class EMB_All_info_Env(gym.Env):
 
         jacobian = self.fi_matrix.jacobian(x, u, torch.tensor([theta], dtype=torch.float64))
         J_f = jacobian[0]
-        print('J_f', J_f)
+        # print('J_f', J_f)
         J_h = self.fi_matrix.jacobian_h(x)
-        print('J_h', J_h)
+        # print('J_h', J_h)
         df_theta = jacobian[1]
-        print('df_theta', df_theta)
+        # print('df_theta', df_theta)
         self.chi = self.fi_matrix.sensitivity_x(J_f, df_theta, self.chi)
-        print('chi', self.chi)
+        # print('chi', self.chi)
         dh_theta = self.fi_matrix.sensitivity_y(self.chi, J_h)
-        print('dh_theta', dh_theta)
+        # print('dh_theta', dh_theta)
         fi_info_new = self.fi_matrix.fisher_info_matrix(dh_theta)
         step_reward = fi_info_new.item()
         self.fi_info += fi_info_new
@@ -188,11 +189,11 @@ class EMB_All_info_Env(gym.Env):
     def close(self):
         return None
 
-env = EMB_All_info_Env()
-env.reset()
-total_reward = 0
-for k in range(3):
-    u = torch.Tensor([-0.5])
-    next_obs, reward, terminations, truncations, infos = env.step(u)
-    total_reward += reward
-print(total_reward)
+# env = EMB_All_info_Env()
+# env.reset()
+# total_reward = 0
+# for k in range(10):
+#     u = torch.Tensor([-0.5])
+#     next_obs, reward, terminations, truncations, infos = env.step(u)
+#     total_reward += reward
+# print(total_reward)

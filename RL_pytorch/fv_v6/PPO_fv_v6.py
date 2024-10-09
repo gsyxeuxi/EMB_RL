@@ -121,14 +121,22 @@ def draw(position_buffers, velocity_buffers):
         ax1 = axes[i]
         ax2 = ax1.twinx()
         color = 'tab:blue'
+        ax1.set_ylim(-20, 110)
+        ax1.set_yticks(range(-20, 111, 10))
+        ax2.set_yticks(range(-600, 601, 100))
+        ax2.set_ylim(-600, 600)
         ax1.set_xlabel('Time / ms')
         ax1.set_ylabel('Position (Rad)', color=color)
         ax1.plot(position_buffer, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
+        ax1.axhline(y=100, color=color, linestyle='--', linewidth=1)
+        ax1.axhline(y=-10, color=color, linestyle='--', linewidth=1)
         color = 'tab:red'
         ax2.set_ylabel('Velocity (Rad/s)', color=color)
         ax2.plot(velocity_buffer, color=color)
         ax2.tick_params(axis='y', labelcolor=color)
+        ax2.axhline(y=500, color=color, linestyle='--', linewidth=1)
+        ax2.axhline(y=-500, color=color, linestyle='--', linewidth=1)
         ax1.set_title(f'Experiment {i + 1}')
     fig.tight_layout(rect=[0, 0, 1, 0.96]) 
     if not os.path.exists('image'):
@@ -144,10 +152,14 @@ def draw_action_reward(action_buffers, reward_buffers):
         ax1 = axes[i]
         ax2 = ax1.twinx()
         color = 'tab:blue'
+        ax1.set_ylim(-7, 7)
+        ax2.set_ylim(-1e8, 1e8)
         ax1.set_xlabel('Time / ms')
         ax1.set_ylabel('Action (V)', color=color)
         ax1.plot(action_buffer, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
+        ax1.axhline(y=6, color=color, linestyle='--', linewidth=1)
+        ax1.axhline(y=-6, color=color, linestyle='--', linewidth=1)
         color = 'tab:red'
         ax2.set_ylabel('Total Reward', color=color)
         ax2.plot(reward_buffer, color=color)
@@ -158,6 +170,7 @@ def draw_action_reward(action_buffers, reward_buffers):
         os.makedirs('image')
     plt.savefig(os.path.join('image', 'action_reward_6_tests.jpg'), dpi=300)
     plt.close()
+
 
 class Agent(nn.Module):
     def __init__(self, envs):
@@ -415,7 +428,7 @@ if __name__ == "__main__":
         }, model_path)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v6__PPO_fv_v6__1__posreward_50/PPO_fv_v6.pth"
+        # model_path = f"runs/EMB-fv-v6__PPO_fv_v6__12__20241003-110131/PPO_fv_v6.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -494,8 +507,8 @@ if __name__ == "__main__":
         for idx, episodic_return in enumerate(episodic_returns):
             writer.add_scalar("eval/episodic_return", episodic_return, idx)
 
-        # draw(position_buffers, velocity_buffers)
-        # draw_action_reward(action_buffers, reward_buffers)
+        draw(position_buffers, velocity_buffers)
+        draw_action_reward(action_buffers, reward_buffers)
 
     envs.close()
     writer.close()
