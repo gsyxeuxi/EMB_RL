@@ -429,7 +429,7 @@ if __name__ == "__main__":
         }, model_path)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v9__PPO_fv_v9__1__20241008-15-1/PPO_fv_v9.pth"
+        # model_path = f"runs/EMB-fv-v9__PPO_fv_v9__1__20241011-151420/PPO_fv_v9.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -456,6 +456,7 @@ if __name__ == "__main__":
         next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
         episodic_returns = []
         cont = 1
+        test_step = 0
         total_reward_test = 0
         position_buffer = [0.0]
         velocity_buffer = [0.0]
@@ -468,8 +469,10 @@ if __name__ == "__main__":
 
         while len(episodic_returns) < eval_episodes:
             next_obs_norm_actor =  next_obs_norm[:,2:5]
-            with torch.no_grad():
-                actions = agent.actor_mean(torch.Tensor(next_obs_norm_actor).to(device)).detach()
+            if test_step < 301:
+                with torch.no_grad():
+                    actions = agent.actor_mean(torch.Tensor(next_obs_norm_actor).to(device)).detach()
+            else: actions = torch.Tensor([-0.05])
             next_obs, reward_test, _, _, infos = env_test.step(actions.cpu().numpy())
             total_reward_test += reward_test[0]
             if not "final_info" in infos:
@@ -478,6 +481,7 @@ if __name__ == "__main__":
             action_buffer.append(6 * np.clip(actions.item(), -1, 1))
             # reward_buffer.append(total_reward_test)    
             reward_buffer.append(reward_test[0]) 
+            # test_step += 1
 
             next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
    
@@ -496,6 +500,7 @@ if __name__ == "__main__":
                     writer.add_scalar(f"eval/velocity_each_step_{cont}", velocity, idx)
 
                 cont += 1
+                test_step = 0
                 total_reward_test = 0
                 position_buffer = [0.0]
                 velocity_buffer = [0.0]

@@ -11,9 +11,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fv:
+EMB_env_fv_v6:
 measure value of x1 and x2 in obs
 sample fv and fv in obs
+no force back to zero point at the end
 h(x) = [x1, x2]
 ''' 
 

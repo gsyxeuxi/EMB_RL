@@ -11,11 +11,13 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fv:
-measure value of x1 and x2 in obs
+EMB_env_fv_v9:
+the right model we want
+for actor: mearesed x1 and x2 and k
+for critic: real x1 and x2 and k and fv and FIM
 sample fv and fv in obs
 h(x) = [x1, x2]
-force back to zero
+force back to zero with reward function v1
 ''' 
 
 class EMB_All_info_Env(gym.Env):
@@ -160,37 +162,45 @@ class EMB_All_info_Env(gym.Env):
         if not self.is_safe:
             self.reward = -1e7 #4e4
 
+        # for test
         elif self.is_dangerous:
-            if self.count > 300:
-                self.reward = (1 - (self.count/self.max_env_steps) ** 2) * step_reward - 200 * (x0_new - self.dangerous_position) ** 2 - \
-                    0.1 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
-            else:
-                self.reward = step_reward
+            self.reward = step_reward - 2000 * (x0_new - self.dangerous_position) ** 2
         else:
-            if self.count > 300:
-                self.reward =  (1 - (self.count/self.max_env_steps) ** 2) * step_reward - \
-                    0.1 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
-            else:
-                self.reward = step_reward
+            self.reward = step_reward
 
+        ## variant 1
+        # elif self.is_dangerous:
+        #     if self.count > 300:
+        #         self.reward = (1 - (self.count/self.max_env_steps) ** 2) * step_reward - 200 * (x0_new - self.dangerous_position) ** 2 - \
+        #             0.1 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
+        #     else:
+        #         self.reward = step_reward - 200 * (x0_new - self.dangerous_position) ** 2 
+        # else:
+        #     if self.count > 300:
+        #         self.reward =  (1 - (self.count/self.max_env_steps) ** 2) * step_reward - \
+        #             0.1 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
+        #     else:
+        #         self.reward = step_reward
+
+        ## variant 2
         # elif self.is_dangerous:
         #     self.reward = (1 - (self.count/self.max_env_steps) ** 2) * step_reward - 200 * (x0_new - self.dangerous_position) ** 2 - \
         #         0.02 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
         # else:
         #     self.reward =  (1 - (self.count/self.max_env_steps) ** 2) * step_reward - \
-                0.02 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
+                # 0.02 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
                 
         self.count += 1
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
             # sprase reward
-            if abs(x0_new) < 6:
-                self.reward += 1e6
-                print('************pos back to zero***********')
-            if abs(x1_new) < 6:
-                self.reward += 1e5
-                print('************vel back to zero***********')
+            # if abs(x0_new) < 6:
+            #     self.reward += 1e5
+            #     print('************pos back to zero***********')
+            # if abs(x1_new) < 6:
+            #     self.reward += 1e5
+            #     print('************vel back to zero***********')
             truncated = True
         else: truncated = False
 

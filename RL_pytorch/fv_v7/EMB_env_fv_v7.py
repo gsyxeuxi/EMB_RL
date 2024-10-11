@@ -11,9 +11,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fv:
-measure value of x1 and x2 in obs
+EMB_env_fv_v7:
+measure value of x1 and x2 in obs for both actor and critic
 nominal fv and fv in obs
+no force back to the zero point in the end 
 h(x) = [x1, x2]
 '''
 
