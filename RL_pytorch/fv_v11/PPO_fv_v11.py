@@ -430,15 +430,14 @@ if __name__ == "__main__":
             print("SPS:", int(global_step / (time.time() - start_time)))
             writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-
-        if num_updates!=0 and num_updates%10 and args.save_model:
-            save_model(num_updates)
+            if num_updates!=0 and num_updates%20==0 and args.save_model:
+                save_model(num_updates)
 
     if args.save_model:
         model_path = save_model(num_updates)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v9__PPO_fv_v9__1__20241009-15-1-0.02-1e5-1e5/PPO_fv_v9.pth"
+        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__1__20241013-123333/PPO_fv_v11_122.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -481,9 +480,9 @@ if __name__ == "__main__":
                 actions = agent.actor_mean(torch.Tensor(next_obs_norm_actor).to(device)).detach()
             next_obs, reward_test, _, _, infos = env_test.step(actions.cpu().numpy())
             total_reward_test += reward_test[0]
-            if not "final_info" in infos:
-                position_buffer.append(next_obs[0][2])
-                velocity_buffer.append(next_obs[0][3])  #len(pos) = len(act) - 1
+            # if not "final_info" in infos:
+            position_buffer.append(next_obs[0][2])
+            velocity_buffer.append(next_obs[0][3])  #len(pos) = len(act) - 1
             action_buffer.append(6 * np.clip(actions.item(), -1, 1))
             # reward_buffer.append(total_reward_test)    
             reward_buffer.append(reward_test[0]) 

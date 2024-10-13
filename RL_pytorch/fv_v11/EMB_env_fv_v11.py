@@ -175,8 +175,8 @@ class EMB_All_info_Env(gym.Env):
             vel_end = 0
             acc_start = 0
             acc_end = 0
-            t_start = 300
-            t_end = 500
+            t_start = 0.3
+            t_end = 0.5
 
             A = np.array([
                 [1, t_start, t_start**2, t_start**3, t_start**4, t_start**5],
@@ -188,11 +188,11 @@ class EMB_All_info_Env(gym.Env):
                 ])
             b = np.array([pos_start, vel_start, acc_start, pos_end, vel_end, acc_end])
             coeff = np.linalg.solve(A, b)
-            t_vals = np.linspace(300, 500, 200)
+            t_vals = np.linspace(0.3, 0.5, 200)
             self.theta_vals = [quintic_polynomial(t, coeff) for t in t_vals]
             self.theta_dt = [quintic_polynomial_dt(t, coeff) for t in t_vals]
             self.find_polynomial = False
-       
+        
         # ************calculate the rewards************
         if not self.is_safe:
             self.reward = -1e7 #4e4
@@ -206,17 +206,18 @@ class EMB_All_info_Env(gym.Env):
         # variant 3
         elif self.is_dangerous:
             if self.count >= 300:
-                self.reward =  - 200 * (x0_new - self.dangerous_position) ** 2 - \
-                    2.5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.1 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.reward =  - 20 * (x0_new - self.dangerous_position) ** 2 - \
+                    25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
             else:
                 self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2
         else:
             if self.count >= 300:
-                self.reward = - 2.5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.1 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.reward = - 25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
             else:
                 self.reward = step_reward
+                # print(step_reward)
                 
         self.count += 1
         terminated = self.terminated
@@ -228,6 +229,7 @@ class EMB_All_info_Env(gym.Env):
                 print('************pos and vel back to zero***********')
             truncated = True
         else: truncated = False
+        
 
         # for drawing
         self.position_buffer.append(x0_new)

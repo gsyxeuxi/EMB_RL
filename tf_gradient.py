@@ -1,14 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-pos_start = 80
-vel_start = 0
+if 20!=0 and 20%20==0 and True:
+    print('1')
+
+
+
+pos_start = 69.4297
+vel_start = -20.8071
 pos_end = 0
 vel_end = 0
-acc_start = 0.01
+acc_start = 0
 acc_end = 0
-t_start = 300
-t_end = 500
+t_start = 0.3
+t_end = 0.5
 
 A = np.array([
     [1, t_start, t_start**2, t_start**3, t_start**4, t_start**5],
@@ -33,7 +38,7 @@ def quintic_polynomial_dt(t, coeff):
     return coeff[1] + 2*coeff[2]*t + 3* coeff[3]*t**2 + 4*coeff[4]*t**3 + 5*coeff[5]*t**4
 
 # 时间范围
-t_vals = np.linspace(300, 500, 1)
+t_vals = np.linspace(0.3, 0.5, 200)
 
 # 计算每个时间点对应的角度值
 theta_vals = [quintic_polynomial(t, coeff) for t in t_vals]
