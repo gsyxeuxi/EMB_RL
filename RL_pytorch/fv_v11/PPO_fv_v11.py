@@ -97,6 +97,7 @@ def make_env(env_id, idx, run_name):
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.NormalizeReward(env)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
+        env.reset(seed=12)
         return env
     return thunk
 
@@ -238,7 +239,6 @@ class Agent(nn.Module):
 
 if __name__ == "__main__":
     args = parse_args()
-    # run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}"
     if args.track:
         import wandb
@@ -287,7 +287,8 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: start the game
         global_step = 0
         start_time = time.time()
-        next_obs, _ = envs.reset(seed=args.seed)
+        # next_obs, _ = envs.reset(seed=args.seed)
+        next_obs, _ = envs.reset()
         next_obs = torch.Tensor(next_obs).to(device)
         next_done = torch.zeros(args.num_envs).to(device)
         num_updates = args.total_timesteps // args.batch_size
@@ -430,14 +431,15 @@ if __name__ == "__main__":
             print("SPS:", int(global_step / (time.time() - start_time)))
             writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-            if num_updates!=0 and num_updates%20==0 and args.save_model:
-                save_model(num_updates)
+            if update!=0 and update%20==0 and args.save_model:
+                print('savedddddddddddddddddddddddddddddddddd')
+                save_model(update)
 
     if args.save_model:
         model_path = save_model(num_updates)
 
     if args.test_model:
-        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__1__20241013-123333/PPO_fv_v11_122.pth"
+        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__134_train/PPO_fv_v11_122.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -490,6 +492,11 @@ if __name__ == "__main__":
             next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
    
             if "final_info" in infos:
+                position_buffer.pop()
+                velocity_buffer.pop()
+                for obs in infos["final_observation"]:
+                    position_buffer.append(obs[2])
+                    velocity_buffer.append(obs[3])
                 position_buffers.append(position_buffer)
                 velocity_buffers.append(velocity_buffer)
                 action_buffers.append(action_buffer)

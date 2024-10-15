@@ -17,7 +17,7 @@ for actor: mearesed x1 and x2
 for critic: real x1 and x2 and k and fv and FIM
 sample fv and fv in obs
 h(x) = [x1, x2]
-force back to zero with reward function v3
+force back to zero with reward function v3: quintic polynomial
 ''' 
 def quintic_polynomial(t, coeff):
     return coeff[0] + coeff[1]*t + coeff[2]*t**2 + coeff[3]*t**3 + coeff[4]*t**4 + coeff[5]*t**5
@@ -45,6 +45,8 @@ class EMB_All_info_Env(gym.Env):
         self.velocity_range = (-500, 500)
         self.fv_range_high = 5e-5
         self.fv_range_low = 1e-5
+        self.pos_reset_range_high = 0.5
+        self.vel_reset_range_high= 2.5
         self.dangerous_position = 75
         self.reset_num = 0
         self.pos_std = 0.001
@@ -88,10 +90,17 @@ class EMB_All_info_Env(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         random.seed(seed)
         super().reset(seed=seed)
-        self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64) #add fv
+        print('seed', seed)
+        self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        # self.state = np.array([-5.0, -430.0, -5.0, -430.0, 0.0, 0.0, 0.0], dtype=np.float64) #for test from other start point
+        # self.state[0] = self.state[2] = random.uniform(-self.pos_reset_range_high, self.pos_reset_range_high)
+        # self.state[1] = self.state[3] = random.uniform(-self.vel_reset_range_high, self.vel_reset_range_high)
+        # self.state[0] = self.state[2] = 79.28
+        # self.state[1] = self.state[3] = -183.91
 
         # if sample the fv
         self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
+        print(self.state[5])
         
         # # if the fv increase continiues
         # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
@@ -110,12 +119,9 @@ class EMB_All_info_Env(gym.Env):
         # det_previous_scale = torch.det(self.fi_info_previous_scale)
         # self.log_det_previous_scale = torch.log(det_previous_scale)
         # self.total_reward_scale = self.log_det_previous_scale
-
         self.back_reward = 0
+        self.minus_reward = 0
         self.find_polynomial = True
-
-        self.position_buffer = [0.0]
-        self.velocity_buffer = [0.0]
         return observation, {}
 
     def step(self, action):
@@ -209,12 +215,14 @@ class EMB_All_info_Env(gym.Env):
                 self.reward =  - 20 * (x0_new - self.dangerous_position) ** 2 - \
                     25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
+                self.minus_reward += self.reward 
             else:
                 self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2
         else:
             if self.count >= 300:
                 self.reward = - 25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
+                self.minus_reward += self.reward 
             else:
                 self.reward = step_reward
                 # print(step_reward)
@@ -223,17 +231,16 @@ class EMB_All_info_Env(gym.Env):
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
+            print('back_reward', self.back_reward)
+            print('minus_reward', self.minus_reward )
+            print('difference', self.minus_reward+self.back_reward)
             # sprase reward
-            if abs(x0_new) < 1 and abs(x1_new) < 5:
+            if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
                 self.reward += self.back_reward
                 print('************pos and vel back to zero***********')
             truncated = True
         else: truncated = False
-        
-
-        # for drawing
-        self.position_buffer.append(x0_new)
-        self.velocity_buffer.append(x1_new)
+      
         return self.state, self.reward, terminated, truncated, {}
     
     def render(self, mode='human'):
