@@ -88,7 +88,7 @@ def parse_args():
     return args
 
 
-def make_env(env_id, idx, run_name):
+def make_env(env_id, seed, idx, run_name):
     def thunk():
         env = EMB_env_fv_v11.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -97,15 +97,16 @@ def make_env(env_id, idx, run_name):
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.NormalizeReward(env)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        env.reset(seed=12)
+        env.reset(seed=seed+idx)
         return env
     return thunk
 
-def make_env_test(env_id, idx, run_name):
+def make_env_test(env_id, seed, idx, run_name):
     def thunk():
         env = EMB_env_fv_v11.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
+        env.reset(seed=seed)
         return env
     return thunk
 
@@ -269,7 +270,7 @@ if __name__ == "__main__":
     if args.train_model:
         # env setup
         envs = gym.vector.SyncVectorEnv(
-            [make_env(args.env_id, i, run_name) for i in range(args.num_envs)]
+            [make_env(args.env_id, args.seed, i, run_name) for i in range(args.num_envs)]
         )
         assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
@@ -287,8 +288,7 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: start the game
         global_step = 0
         start_time = time.time()
-        # next_obs, _ = envs.reset(seed=args.seed)
-        next_obs, _ = envs.reset()
+        next_obs, _ = envs.reset(seed=args.seed)
         next_obs = torch.Tensor(next_obs).to(device)
         next_done = torch.zeros(args.num_envs).to(device)
         num_updates = args.total_timesteps // args.batch_size
@@ -451,7 +451,7 @@ if __name__ == "__main__":
         obs_rms_list = checkpoint.get('obs_rms_list', [])
         # rew_rms_list = checkpoint.get('rew_rms_list', [])
         
-        env_test = gym.vector.SyncVectorEnv([make_env_test(args.env_id, 0, run_name=f"{run_name}-eval")])
+        env_test = gym.vector.SyncVectorEnv([make_env_test(args.env_id, args.seed, 0, run_name=f"{run_name}-eval")])
         # the rms will not  be recorded at here
         means = [item['mean'] for item in obs_rms_list]
         vars = [item['var'] for item in obs_rms_list]

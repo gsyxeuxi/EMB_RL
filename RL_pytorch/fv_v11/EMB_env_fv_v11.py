@@ -13,7 +13,7 @@ matplotlib.use('Agg')
 '''
 EMB_env_fv_v11:
 the right model we want
-for actor: mearesed x1 and x2
+for actor: measured x1 and x2
 for critic: real x1 and x2 and k and fv and FIM
 sample fv and fv in obs
 h(x) = [x1, x2]
@@ -91,6 +91,7 @@ class EMB_All_info_Env(gym.Env):
         random.seed(seed)
         super().reset(seed=seed)
         print('seed', seed)
+        time.sleep(1)
         self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
         # self.state = np.array([-5.0, -430.0, -5.0, -430.0, 0.0, 0.0, 0.0], dtype=np.float64) #for test from other start point
         # self.state[0] = self.state[2] = random.uniform(-self.pos_reset_range_high, self.pos_reset_range_high)
@@ -100,7 +101,6 @@ class EMB_All_info_Env(gym.Env):
 
         # if sample the fv
         self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
-        print(self.state[5])
         
         # # if the fv increase continiues
         # self.state[5] = self.fv_range_low + self.reset_num * 1e-6

@@ -1,7 +1,9 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\RL_pytorch",
+    "\\RL_pytorch\\fv_v11"
   ],
-  "SelectedNode": "\\C:\\Users\\ugs4fe\\OneDrive - Bosch Group\\Simpel model RL",
+  "SelectedNode": "\\RL_pytorch\\fv_v11\\PPO_fv_v11.py",
   "PreviewInSolutionExplorer": false
 }
