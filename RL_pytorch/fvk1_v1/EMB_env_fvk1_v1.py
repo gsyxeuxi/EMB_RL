@@ -6,7 +6,7 @@ import time
 import torch
 import math
 import random
-from EMB_model_fv_v2 import FI_matrix
+from EMB_model_fvk1_v1 import FI_matrix
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
@@ -227,9 +227,9 @@ class EMB_All_info_Env(gym.Env):
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
-            # print('back_reward', self.back_reward)
-            # print('minus_reward', self.minus_reward )
-            # print('difference', self.minus_reward+self.back_reward)
+            print('back_reward', self.back_reward)
+            print('minus_reward', self.minus_reward )
+            print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
                 self.reward += self.back_reward

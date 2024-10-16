@@ -4,18 +4,11 @@ import random
 
 random.seed(12)
 for i in range (5):
-    state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
-    # self.state = np.array([-5.0, -430.0, -5.0, -430.0, 0.0, 0.0, 0.0], dtype=np.float64) #for test from other start point
-    # self.state[0] = self.state[2] = random.uniform(-self.pos_reset_range_high, self.pos_reset_range_high)
-    # self.state[1] = self.state[3] = random.uniform(-self.vel_reset_range_high, self.vel_reset_range_high)
-    # self.state[0] = self.state[2] = 79.28
-    # self.state[1] = self.state[3] = -183.91
+    
+    a= random.uniform(0, 10)
+    b= random.uniform(0, 100)
 
-    # if sample the fv
-    state[5] = random.uniform(1, 3)
-    seed = None
-    random.seed(seed)
-    print(state[5])
+    print(a, b)
 
 
 

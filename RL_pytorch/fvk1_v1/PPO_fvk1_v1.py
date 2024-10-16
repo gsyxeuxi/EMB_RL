@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
-import EMB_env_fv_v11
+import EMB_env_fvk1_v1
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
@@ -23,7 +23,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
         help="the name of this experiment")
-    parser.add_argument("--env-id", type=str, default="EMB-fv-v11",
+    parser.add_argument("--env-id", type=str, default="EMB-fvk1-v1",
         help="the id of the environment")
     parser.add_argument("--learning-rate", type=float, default=1e-3,
         help="the learning rate of the optimizer")
@@ -90,7 +90,7 @@ def parse_args():
 
 def make_env(env_id, seed, idx, run_name):
     def thunk():
-        env = EMB_env_fv_v11.EMB_All_info_Env()
+        env = EMB_env_fvk1_v1.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
@@ -102,7 +102,7 @@ def make_env(env_id, seed, idx, run_name):
 
 def make_env_test(env_id, seed, idx, run_name):
     def thunk():
-        env = EMB_env_fv_v11.EMB_All_info_Env()
+        env = EMB_env_fvk1_v1.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         return env
@@ -437,7 +437,7 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__1__20241016-105522/PPO_fv_v11_100.pth"
+        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__134_train/PPO_fv_v11_122.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
