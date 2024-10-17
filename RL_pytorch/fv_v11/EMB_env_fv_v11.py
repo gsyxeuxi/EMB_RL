@@ -91,7 +91,6 @@ class EMB_All_info_Env(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
         self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
-        # self.state = np.array([-5.0, -430.0, -5.0, -430.0, 0.0, 0.0, 0.0], dtype=np.float64) #for test from other start point
         self.state[0] = self.state[2] = random.uniform(-self.pos_reset_range_high, self.pos_reset_range_high)
         self.state[1] = self.state[3] = random.uniform(-self.vel_reset_range_high, self.vel_reset_range_high)
 
