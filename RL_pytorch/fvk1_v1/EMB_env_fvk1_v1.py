@@ -93,14 +93,13 @@ class EMB_All_info_Env(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
         self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
-        # self.state = np.array([-5.0, -430.0, -5.0, -430.0, 0.0, 0.0, 0.0], dtype=np.float64) #for test from other start point
         self.state[0] = self.state[2] = random.uniform(-self.pos_reset_range_high, self.pos_reset_range_high)
         self.state[1] = self.state[3] = random.uniform(-self.vel_reset_range_high, self.vel_reset_range_high)
 
         # if sample the parameter
         self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
         self.state[6] = random.uniform(self.k1_range_low, self.k1_range_high)
-        
+
         # # if the fv increase continiues
         # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
         # self.reset_num += 1
@@ -110,7 +109,7 @@ class EMB_All_info_Env(gym.Env):
         self.chi = torch.zeros((2, 2), dtype=torch.float64)
         self.scale_factor = 1
         self.scale_factor_previous = 1
-        self.fi_info = torch.diag(torch.tensor([1e-6, 1e-6]))
+        self.fi_info = torch.diag(torch.tensor([1e-6, 1e-6])) #initialize a small value
         self.det_init = torch.det(self.fi_info)
 
         self.fi_info_scale = self.fi_info * self.scale_factor
@@ -119,6 +118,9 @@ class EMB_All_info_Env(gym.Env):
         self.log_det_previous_scale = torch.log(det_previous_scale)
         self.total_reward_scale = self.log_det_previous_scale
 
+        #for test if the scale is right
+        self.log_det_previous = torch.log(self.det_init)
+
         self.back_reward = 0
         self.minus_reward = 0
         self.find_polynomial = True
@@ -126,9 +128,10 @@ class EMB_All_info_Env(gym.Env):
 
     def step(self, action):
         # ************get observation space:************
-        x0, x1, _, _, k, fv, k1, sv = self._get_obs() # real state from last lime
+        x0, x1, _, _, k, fv, k1, _, _, _ = self._get_obs() # real state from last lime
         x = torch.tensor([x0, x1], dtype=torch.float64)
-        u = self.action_fact * action.item() #input current
+        # u = self.action_fact * action.item() #input current
+        u = 2
         dx = self.fi_matrix.f(x, u, torch.tensor([fv, k1], dtype=torch.float64))
         x = x + self._dt * dx
         x0_new, x1_new = x[0].item(), x[1].item() #for plot
@@ -143,28 +146,38 @@ class EMB_All_info_Env(gym.Env):
         self.chi = self.fi_matrix.sensitivity_x(J_f, df_theta, self.chi)
         dh_theta = self.fi_matrix.sensitivity_y(self.chi, J_h)
         fi_info_new = self.fi_matrix.fisher_info_matrix(dh_theta)
-        step_reward = fi_info_new.item()
         self.fi_info += fi_info_new
+
+        # #for test if the scale is right
+        # det_fi = torch.det(self.fi_info)
+        # log_det = torch.log(det_fi)
+        # step_reward = log_det -  self.log_det_previous
 
 
         fi_info_new_scale = fi_info_new * self.scale_factor
         self.fi_info_scale = self.fi_info_previous_scale + fi_info_new_scale
         
         FIM_upper_triangle = []
-        for i in range(np.array(self.fi_info_scale).shape[0]):
-            for j in range(i, np.array(self.fi_info_scale).shape[1]):
-                FIM_upper_triangle.append(np.array(self.fi_info_scale)[i, j])
-        
-        # s1_new, s2_new, s3_new, s4_new = upper_triangle_elements[:]
+        for i in range(self.fi_info.detach().numpy().shape[0]):
+            for j in range(i, self.fi_info.detach().numpy().shape[1]):
+                FIM_upper_triangle.append(self.fi_info.detach().numpy()[i, j])
 
-        self.fi_matrix.symmetrie_test(self.fi_info_scale)
+        # self.fi_matrix.symmetrie_test(self.fi_info_scale)
         det_fi_scale = torch.det(self.fi_info_scale)
         log_det_scale = torch.log(det_fi_scale)
         step_reward_scale = log_det_scale - self.log_det_previous_scale
-        self.scale_factor = (self.det_init / det_fi_scale) ** (1/4)
+        self.total_reward_scale += step_reward_scale
+        self.scale_factor = (self.det_init / det_fi_scale) ** (1/2)
         self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
         self.log_det_previous_scale = torch.slogdet(self.fi_info_previous_scale)[1]
         self.scale_factor_previous = self.scale_factor
+
+        # #for test if the scale is right
+        # self.log_det_previous = log_det
+        # print(step_reward_scale.item())
+        # print(step_reward.item())
+        # print("**************************")
+        # time.sleep(1)
 
         k_new = k + 1
         #update the state
@@ -203,7 +216,7 @@ class EMB_All_info_Env(gym.Env):
         
         # ************calculate the rewards************
         if not self.is_safe:
-            self.reward = -1e7 #4e4
+            self.reward = -1e3 #4e4
 
         # # for test
         # elif self.is_dangerous:
@@ -214,28 +227,28 @@ class EMB_All_info_Env(gym.Env):
         # variant 3
         elif self.is_dangerous:
             if self.count >= 300:
-                self.reward =  - 20 * (x0_new - self.dangerous_position) ** 2 - \
-                    25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += step_reward
+                self.reward =  - 0.02 * (x0_new - self.dangerous_position) ** 2 - \
+                    0.025 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.001 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.back_reward += 1000 * step_reward_scale.item()
                 self.minus_reward += self.reward 
             else:
-                self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2
+                self.reward = 1000 * step_reward_scale.item() - 0.3 * (x0_new - self.dangerous_position) ** 2
         else:
             if self.count >= 300:
-                self.reward = - 25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += step_reward
+                self.reward = - 0.025 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.001 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.back_reward += 1000 * step_reward_scale.item()
                 self.minus_reward += self.reward 
             else:
-                self.reward = step_reward
+                self.reward = 1000 * step_reward_scale.item()
                 # print(step_reward)
                 
         self.count += 1
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
-            print('back_reward', self.back_reward)
-            print('minus_reward', self.minus_reward )
-            print('difference', self.minus_reward+self.back_reward)
+            # print('back_reward', self.back_reward)
+            # print('minus_reward', self.minus_reward )
+            # print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
                 self.reward += self.back_reward

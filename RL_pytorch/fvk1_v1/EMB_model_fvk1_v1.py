@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch.distributions.normal import Normal
 import math
+import time
 
 
 """
@@ -132,72 +133,73 @@ class FI_matrix(object):
         except np.linalg.LinAlgError:
             return False
 
-# Initial state
-x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
-chi = torch.zeros((2, 2), dtype=torch.float64)
-# fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
-fi_info = torch.diag(torch.tensor([ 1e-6, 1e-6]))
-det_T = 0.001  # Time step
-theta = torch.tensor([2.16e-5, 30], dtype=torch.float64)
+# # Initial state
+# x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
+# chi = torch.zeros((2, 2), dtype=torch.float64)
+# # fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
+# fi_info = torch.diag(torch.tensor([ 1e-6, 1e-6]))
+# det_T = 0.001  # Time step
+# theta = torch.tensor([2.16e-5, 23.04], dtype=torch.float64)
 
-fi_matrix = FI_matrix()
-x = x_0
-pi = torch.tensor(math.pi, dtype=torch.float64)
-scale_factor = 1.0
-scale_factor_previous = 1.0
-det_init = torch.det(fi_info)
-fi_info_scale = fi_info * scale_factor
-fi_info_previous_scale = fi_info_scale
-det_previous_scale = torch.det(fi_info_previous_scale)
-log_det_previous_scale = torch.log(det_previous_scale)
-total_reward_scale = log_det_previous_scale
-log_det_previous = torch.log(det_init)
+# fi_matrix = FI_matrix()
+# x = x_0
+# pi = torch.tensor(math.pi, dtype=torch.float64)
+# scale_factor = 1.0
+# scale_factor_previous = 1.0
+# det_init = torch.det(fi_info)
+# fi_info_scale = fi_info * scale_factor
+# fi_info_previous_scale = fi_info_scale
+# det_previous_scale = torch.det(fi_info_previous_scale)
+# log_det_previous_scale = torch.log(det_previous_scale)
+# total_reward_scale = log_det_previous_scale
+# log_det_previous = torch.log(det_init)
 
-# Start the simulation
-for k in range(150):  # 350 = 0.35s
-    # u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
-    u = 1.5
-    if k > 150:
-        u = 0
-    dx = fi_matrix.f(x, u, theta)
-    x = x + det_T * dx
-    print(x)
-    J_f, df_theta = fi_matrix.jacobian(x, u, theta)
-    J_h = fi_matrix.jacobian_h(x)
-    chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
-    print('chi', chi)
-    print("**********", k, "********************")
-    dh_theta = fi_matrix.sensitivity_y(chi, J_h)
+# # Start the simulation
+# for k in range(150):  # 350 = 0.35s
+#     # u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
+#     u = 2
+#     if k > 150:
+#         u = 0
+#     dx = fi_matrix.f(x, u, theta)
+#     x = x + det_T * dx
+#     print(x)
+#     J_f, df_theta = fi_matrix.jacobian(x, u, theta)
+#     J_h = fi_matrix.jacobian_h(x)
+#     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
+#     print('chi', chi)
+#     print("**********", k, "********************")
+#     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
 
-    fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
-    # print('reward', fi_info_new)
-    fi_info_new_scale = fi_info_new * scale_factor
-    fi_info_scale = fi_info_previous_scale + fi_info_new_scale
-    fi_info += fi_info_new
-    # print('fi', fi_info)
-    # fi_matrix.symmetrie_test(fi_info_scale)
+#     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
+#     # print('reward', fi_info_new)
+#     fi_info_new_scale = fi_info_new * scale_factor
+#     fi_info_scale = fi_info_previous_scale + fi_info_new_scale
+#     fi_info += fi_info_new
+#     # print('fi', fi_info)
+#     # fi_matrix.symmetrie_test(fi_info_scale)
 
-    det_fi_scale = torch.det(fi_info_scale)
-    log_det_scale = torch.log(det_fi_scale)
+#     det_fi_scale = torch.det(fi_info_scale)
+#     log_det_scale = torch.log(det_fi_scale)
 
-    det_fi = torch.det(fi_info)
-    log_det = torch.log(det_fi)
+#     det_fi = torch.det(fi_info)
+#     log_det = torch.log(det_fi)
     
-    step_reward_scale = log_det_scale - log_det_previous_scale
-    total_reward_scale = total_reward_scale + step_reward_scale
-    step_reward = log_det - log_det_previous
+#     step_reward_scale = log_det_scale - log_det_previous_scale
+#     total_reward_scale = total_reward_scale + step_reward_scale
+#     step_reward = log_det - log_det_previous
 
-    scale_factor = (det_init / det_fi_scale).pow(1 / 2)
-    fi_info_previous_scale = fi_info_scale * (scale_factor / scale_factor_previous)
-    log_det_previous_scale = torch.slogdet(fi_info_previous_scale)[1]
-    scale_factor_previous = scale_factor
-    log_det_previous = log_det
-    print(step_reward_scale)
-    print(step_reward)
-    print('**************************************************************')
+#     scale_factor = (det_init / det_fi_scale).pow(1 / 2)
+#     fi_info_previous_scale = fi_info_scale * (scale_factor / scale_factor_previous)
+#     log_det_previous_scale = torch.slogdet(fi_info_previous_scale)[1]
+#     scale_factor_previous = scale_factor
+#     log_det_previous = log_det
+#     print(step_reward_scale)
+#     print(step_reward)
+#     print('**************************************************************')
+#     time.sleep(1)
 
-print('det scale is', torch.det(fi_info_scale).item())
-print('log det scale is', torch.log(torch.det(fi_info_scale)).item())
-print("total_reward_scale", total_reward_scale.item())
-print('logdet fi', log_det)
-print('fi', fi_info)
+# print('det scale is', torch.det(fi_info_scale).item())
+# print('log det scale is', torch.log(torch.det(fi_info_scale)).item())
+# print("total_reward_scale", total_reward_scale.item())
+# print('logdet fi', log_det)
+# print('fi', fi_info)

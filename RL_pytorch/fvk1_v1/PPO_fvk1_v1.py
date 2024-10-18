@@ -206,7 +206,7 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(5, 64)),
+            layer_init(nn.Linear(7, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
@@ -222,11 +222,11 @@ class Agent(nn.Module):
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
     def get_value(self, x):
-        return self.critic(torch.cat((x[:, :2], x[:, -3:]), dim=1))
+        return self.critic(torch.cat((x[:, :2], x[:, -5:]), dim=1))
 
     def get_action_and_value(self, x, action=None):
         actor_obs = x[:,2:5]
-        critic_obs =  torch.cat((x[:, :2], x[:, -3:]), dim=1)
+        critic_obs =  torch.cat((x[:, :2], x[:, -5:]), dim=1)
         action_mean = self.actor_mean(actor_obs)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
@@ -429,7 +429,7 @@ if __name__ == "__main__":
             print("SPS:", int(global_step / (time.time() - start_time)))
             writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-            if update!=0 and update%20==0 and args.save_model:
+            if update!=0 and update%100==0 and args.save_model:
                 print('savedddddddddddddddddddddddddddddddddd')
                 save_model(update)
 
