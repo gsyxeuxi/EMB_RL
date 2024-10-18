@@ -262,7 +262,6 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
-
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     if args.train_model:
@@ -437,9 +436,9 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241016-train/PPO_fv_v11_140.pth"
+        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241018-train-nobackreward/PPO_fv_v11_244.pth"
         epsilon = 1e-8
-        eval_episodes = 6
+        eval_episodes = 40
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')

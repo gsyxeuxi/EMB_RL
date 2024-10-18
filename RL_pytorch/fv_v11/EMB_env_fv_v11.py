@@ -91,15 +91,16 @@ class EMB_All_info_Env(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
         self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+
         self.state[0] = self.state[2] = random.uniform(-self.pos_reset_range_high, self.pos_reset_range_high)
         self.state[1] = self.state[3] = random.uniform(-self.vel_reset_range_high, self.vel_reset_range_high)
 
-        # if sample the fv
-        self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
+        # # if sample the fv
+        # self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
         
-        # # if the fv increase continiues
-        # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
-        # self.reset_num += 1
+        # if the fv increase continiues
+        self.state[5] = self.fv_range_low + self.reset_num * 1e-6
+        self.reset_num += 1
  
         self.count = 0
         observation = self._get_obs()
@@ -220,15 +221,11 @@ class EMB_All_info_Env(gym.Env):
                 self.minus_reward += self.reward 
             else:
                 self.reward = step_reward
-                # print(step_reward)
                 
         self.count += 1
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
-            # print('back_reward', self.back_reward)
-            # print('minus_reward', self.minus_reward )
-            # print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
                 self.reward += self.back_reward
