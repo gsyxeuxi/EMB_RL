@@ -436,9 +436,9 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241018-train-nobackreward/PPO_fv_v11_244.pth"
+        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241018-train-nobackreward/PPO_fv_v11_244.pth"
         epsilon = 1e-8
-        eval_episodes = 40
+        eval_episodes = 6
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')

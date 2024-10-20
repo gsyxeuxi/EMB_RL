@@ -130,8 +130,8 @@ class EMB_All_info_Env(gym.Env):
         # ************get observation space:************
         x0, x1, _, _, k, fv, k1, _, _, _ = self._get_obs() # real state from last lime
         x = torch.tensor([x0, x1], dtype=torch.float64)
-        # u = self.action_fact * action.item() #input current
-        u = 2
+        u = self.action_fact * action.item() #input current
+        # u = 0
         dx = self.fi_matrix.f(x, u, torch.tensor([fv, k1], dtype=torch.float64))
         x = x + self._dt * dx
         x0_new, x1_new = x[0].item(), x[1].item() #for plot
@@ -216,7 +216,7 @@ class EMB_All_info_Env(gym.Env):
         
         # ************calculate the rewards************
         if not self.is_safe:
-            self.reward = -1e3 #4e4
+            self.reward = -1e5 #4e4
 
         # # for test
         # elif self.is_dangerous:
@@ -226,20 +226,20 @@ class EMB_All_info_Env(gym.Env):
 
         # variant 3
         elif self.is_dangerous:
-            if self.count >= 300:
-                self.reward =  - 0.02 * (x0_new - self.dangerous_position) ** 2 - \
-                    0.025 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.001 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += 100 * step_reward_scale.item()
-                self.minus_reward += self.reward 
-            else:
-                self.reward = 100 * step_reward_scale.item() - 0.3 * (x0_new - self.dangerous_position) ** 2
+            # if self.count >= 300:
+            #     self.reward =  - 0.2 * (x0_new - self.dangerous_position) ** 2 - \
+            #         0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
+            #     self.back_reward += 10000 * step_reward_scale.item()
+            #     self.minus_reward += self.reward 
+            # else:
+                self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
         else:
-            if self.count >= 300:
-                self.reward = - 0.025 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.001 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += 100 * step_reward_scale.item()
-                self.minus_reward += self.reward 
-            else:
-                self.reward = 100 * step_reward_scale.item()
+            # if self.count >= 300:
+            #     self.reward = - 0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
+            #     self.back_reward += 10000 * step_reward_scale.item()
+            #     self.minus_reward += self.reward 
+            # else:
+                self.reward = 10000 * step_reward_scale.item()
                 # print(step_reward)
                 
         self.count += 1
@@ -251,7 +251,7 @@ class EMB_All_info_Env(gym.Env):
             # print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
-                self.reward += self.back_reward
+                # self.reward += self.back_reward
                 print('************pos and vel back to zero***********')
             truncated = True
         else: truncated = False
