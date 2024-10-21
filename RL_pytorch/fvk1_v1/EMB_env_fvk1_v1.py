@@ -66,8 +66,7 @@ class EMB_All_info_Env(gym.Env):
         """
         A 1-Dim Space: Control the voltage of motor
         """
-        self.action_space = gym.spaces.Box(low=-self.max_action, high=self.max_action, shape=(1,), dtype=np.float64)  
-        self.total_reward_scale = 0      
+        self.action_space = gym.spaces.Box(low=-self.max_action, high=self.max_action, shape=(1,), dtype=np.float64)      
         
     @property
     def terminated(self):
@@ -109,17 +108,17 @@ class EMB_All_info_Env(gym.Env):
         self.chi = torch.zeros((2, 2), dtype=torch.float64)
         self.scale_factor = 1
         self.scale_factor_previous = 1
-        self.fi_info = torch.diag(torch.tensor([1e-6, 1e-6])) #initialize a small value
+        self.fi_info = torch.diag(torch.tensor([1e-4, 1e-4])) #initialize a small value
         self.det_init = torch.det(self.fi_info)
 
         self.fi_info_scale = self.fi_info * self.scale_factor
         self.fi_info_previous_scale = self.fi_info_scale
         det_previous_scale = torch.det(self.fi_info_previous_scale)
         self.log_det_previous_scale = torch.log(det_previous_scale)
-        self.total_reward_scale = self.log_det_previous_scale
+        self.log_det_init = self.log_det_previous_scale
 
-        #for test if the scale is right
-        self.log_det_previous = torch.log(self.det_init)
+        # #for test if the scale is right
+        # self.log_det_previous = torch.log(self.det_init)
 
         self.back_reward = 0
         self.minus_reward = 0
@@ -131,11 +130,9 @@ class EMB_All_info_Env(gym.Env):
         x0, x1, _, _, k, fv, k1, _, _, _ = self._get_obs() # real state from last lime
         x = torch.tensor([x0, x1], dtype=torch.float64)
         u = self.action_fact * action.item() #input current
-        # u = 0
         dx = self.fi_matrix.f(x, u, torch.tensor([fv, k1], dtype=torch.float64))
         x = x + self._dt * dx
         x0_new, x1_new = x[0].item(), x[1].item() #for plot
-
         x0_noise = x0_new + np.random.normal(0, self.pos_std)
         x1_noise = x1_new + np.random.normal(0, self.vel_std)
 
@@ -166,7 +163,6 @@ class EMB_All_info_Env(gym.Env):
         det_fi_scale = torch.det(self.fi_info_scale)
         log_det_scale = torch.log(det_fi_scale)
         step_reward_scale = log_det_scale - self.log_det_previous_scale
-        self.total_reward_scale += step_reward_scale
         self.scale_factor = (self.det_init / det_fi_scale) ** (1/2)
         self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
         self.log_det_previous_scale = torch.slogdet(self.fi_info_previous_scale)[1]
@@ -216,36 +212,51 @@ class EMB_All_info_Env(gym.Env):
         
         # ************calculate the rewards************
         if not self.is_safe:
-            self.reward = -1e5 #4e4
+            """
+            Get the real logdetFIM back:
+            r = logdet(M_k+1) - logdet(M_k)
+            Sigma(r) = logdet(M_n) - logdet(M_0)
+            10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
+            10000logdet(M_0) = -1.842e5
+            """
+            self.reward += (10000 * self.log_det_init.item() - 1e7)
+     
 
         # # for test
         # elif self.is_dangerous:
-        #     self.reward = step_reward - 200 * (x0_new - self.dangerous_position) ** 2
+        #     self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
         # else:
-        #     self.reward = step_reward
+        #     self.reward = 10000 * step_reward_scale.item()
 
         # variant 3
         elif self.is_dangerous:
-            # if self.count >= 300:
-            #     self.reward =  - 0.2 * (x0_new - self.dangerous_position) ** 2 - \
-            #         0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
-            #     self.back_reward += 10000 * step_reward_scale.item()
-            #     self.minus_reward += self.reward 
-            # else:
+            if self.count >= 300:
+                self.reward =  - 0.2 * (x0_new - self.dangerous_position) ** 2 - \
+                    0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.back_reward += 10000 * step_reward_scale.item()
+                self.minus_reward += self.reward 
+            else:
                 self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
         else:
-            # if self.count >= 300:
-            #     self.reward = - 0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
-            #     self.back_reward += 10000 * step_reward_scale.item()
-            #     self.minus_reward += self.reward 
-            # else:
+            if self.count >= 300:
+                self.reward = - 0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.back_reward += 10000 * step_reward_scale.item()
+                self.minus_reward += self.reward 
+            else:
                 self.reward = 10000 * step_reward_scale.item()
-                # print(step_reward)
                 
         self.count += 1
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
+            """
+            Get the real logdetFIM back:
+            r = logdet(M_k+1) - logdet(M_k)
+            Sigma(r) = logdet(M_n) - logdet(M_0)
+            10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
+            """
+            self.reward += 10000 * self.log_det_init.item()
+
             # print('back_reward', self.back_reward)
             # print('minus_reward', self.minus_reward )
             # print('difference', self.minus_reward+self.back_reward)

@@ -134,10 +134,11 @@ class FI_matrix(object):
             return False
 
 # # Initial state
-# x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
+# x_0 = torch.tensor([0.2, 1.0], dtype=torch.float64)
+# # x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
 # chi = torch.zeros((2, 2), dtype=torch.float64)
 # # fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
-# fi_info = torch.diag(torch.tensor([ 1e-6, 1e-6]))
+# fi_info = torch.diag(torch.tensor([ 1e-4, 1e-4]))
 # det_T = 0.001  # Time step
 # theta = torch.tensor([2.16e-5, 23.04], dtype=torch.float64)
 
@@ -155,18 +156,18 @@ class FI_matrix(object):
 # log_det_previous = torch.log(det_init)
 
 # # Start the simulation
-# for k in range(150):  # 350 = 0.35s
+# for k in range(500):  # 350 = 0.35s
 #     # u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
-#     u = 2
-#     if k > 150:
-#         u = 0
+#     u = 1
+#     # if k > 150:
+#     #     u = 0
 #     dx = fi_matrix.f(x, u, theta)
 #     x = x + det_T * dx
-#     print(x)
+#     # x = torch.tensor([10.0, 10.0], dtype=torch.float64)
 #     J_f, df_theta = fi_matrix.jacobian(x, u, theta)
 #     J_h = fi_matrix.jacobian_h(x)
 #     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
-#     print('chi', chi)
+#     # print('chi', chi)
 #     print("**********", k, "********************")
 #     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
 
@@ -183,9 +184,11 @@ class FI_matrix(object):
 
 #     det_fi = torch.det(fi_info)
 #     log_det = torch.log(det_fi)
-    
+
 #     step_reward_scale = log_det_scale - log_det_previous_scale
-#     total_reward_scale = total_reward_scale + step_reward_scale
+#     print(total_reward_scale)
+#     total_reward_scale = total_reward_scale + step_reward_scale.item()
+#     print("reward", total_reward_scale)
 #     step_reward = log_det - log_det_previous
 
 #     scale_factor = (det_init / det_fi_scale).pow(1 / 2)
@@ -193,10 +196,10 @@ class FI_matrix(object):
 #     log_det_previous_scale = torch.slogdet(fi_info_previous_scale)[1]
 #     scale_factor_previous = scale_factor
 #     log_det_previous = log_det
-#     print(step_reward_scale)
-#     print(step_reward)
+#     # print(step_reward_scale)
+#     # print(step_reward)
 #     print('**************************************************************')
-#     time.sleep(1)
+#     # time.sleep(1)
 
 # print('det scale is', torch.det(fi_info_scale).item())
 # print('log det scale is', torch.log(torch.det(fi_info_scale)).item())
