@@ -1,15 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import torch
+cont =21
+if cont <= 300:
+    actions = torch.Tensor([[1.0]]) if (cont // 20) % 2 == 0 else torch.Tensor([[-1.0]])
+else:
+    actions = torch.Tensor([[0.0]])
 
-random.seed(12)
-for i in range (5):
-    
-    a= random.uniform(0, 10)
-    b= random.uniform(0, 100)
-
-    print(a, b)
-
+print(actions)
 
 
 # pos_start = 62.3297

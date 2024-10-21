@@ -465,6 +465,7 @@ if __name__ == "__main__":
         next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
         episodic_returns = []
         cont = 1
+        step = 0
         total_reward_test = 0
         position_buffer = [0.0]
         velocity_buffer = [0.0]
@@ -479,6 +480,13 @@ if __name__ == "__main__":
             next_obs_norm_actor =  next_obs_norm[:,2:5]
             with torch.no_grad():
                 actions = agent.actor_mean(torch.Tensor(next_obs_norm_actor).to(device)).detach()
+
+            # if step <= 300:
+            #     actions = torch.Tensor([[1.0]]) if (step // 10) % 2 == 0 else torch.Tensor([[-1.0]])
+            # else:
+            #     actions = torch.Tensor([[0.0]])
+            # step += 1
+
             next_obs, reward_test, _, _, infos = env_test.step(actions.cpu().numpy())
             total_reward_test += reward_test[0]
             # if not "final_info" in infos:
@@ -510,6 +518,7 @@ if __name__ == "__main__":
                     writer.add_scalar(f"eval/velocity_each_step_{cont}", velocity, idx)
 
                 cont += 1
+                step = 0
                 total_reward_test = 0
                 position_buffer = [0.0]
                 velocity_buffer = [0.0]
