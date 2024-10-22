@@ -219,14 +219,16 @@ class EMB_All_info_Env(gym.Env):
             10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
             10000logdet(M_0) = -1.842e5
             """
-            self.reward += (10000 * self.log_det_init.item() - 1e7)
+            # self.reward += (10000 * self.log_det_init.item() - 1e7)
+            self.reward -= 1e7
      
 
         # for test
         # elif self.is_dangerous:
         #     self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
         else:
-            self.reward = 10000 * step_reward_scale.item()
+            self.reward = (100 * step_reward_scale.item()) ** 2
+            # self.reward = 10000 * step_reward_scale.item()
         # a, b, d = FIM_upper_triangle[:]
         # print(a, b, d)
         # self.reward = (a + d) / (a * d - b**2)
@@ -258,7 +260,7 @@ class EMB_All_info_Env(gym.Env):
             Sigma(r) = logdet(M_n) - logdet(M_0)
             10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
             """
-            self.reward += 10000 * self.log_det_init.item()
+            # self.reward += 10000 * self.log_det_init.item()
 
             # print('back_reward', self.back_reward)
             # print('minus_reward', self.minus_reward )

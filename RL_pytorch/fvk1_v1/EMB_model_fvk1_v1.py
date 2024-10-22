@@ -134,7 +134,7 @@ class FI_matrix(object):
             return False
 
 # # Initial state
-# x_0 = torch.tensor([0.2, 1.0], dtype=torch.float64)
+# x_0 = torch.tensor([-0.2, 1.0], dtype=torch.float64)
 # # x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
 # chi = torch.zeros((2, 2), dtype=torch.float64)
 # # fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
@@ -155,10 +155,11 @@ class FI_matrix(object):
 # total_reward_scale = log_det_previous_scale
 # log_det_previous = torch.log(det_init)
 
+# print(x)
 # # Start the simulation
-# for k in range(500):  # 350 = 0.35s
+# for k in range(5):  # 350 = 0.35s
 #     # u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
-#     u = 1
+#     u = -6
 #     # if k > 150:
 #     #     u = 0
 #     dx = fi_matrix.f(x, u, theta)
@@ -167,7 +168,7 @@ class FI_matrix(object):
 #     J_f, df_theta = fi_matrix.jacobian(x, u, theta)
 #     J_h = fi_matrix.jacobian_h(x)
 #     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
-#     # print('chi', chi)
+#     print('chi', chi)
 #     print("**********", k, "********************")
 #     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
 
