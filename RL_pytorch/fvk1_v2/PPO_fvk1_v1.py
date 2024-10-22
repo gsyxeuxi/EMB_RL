@@ -26,7 +26,7 @@ def parse_args():
         help="the name of this experiment")
     parser.add_argument("--env-id", type=str, default="EMB-fvk1-v1",
         help="the id of the environment")
-    parser.add_argument("--learning-rate", type=float, default=5e-4,
+    parser.add_argument("--learning-rate", type=float, default=1e-3,
         help="the learning rate of the optimizer")
     parser.add_argument("--seed", type=int, default=1,
         help="seed of the experiment")
@@ -438,7 +438,7 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        model_path = f"runs/EMB-fvk1-v1__ppo_fvk1_v1__1__20241022-lr5e-4/PPO_fvk1_v1_244.pth"
+        model_path = f"runs/EMB-fvk1-v1__PPO_fvk1_v1__1__20241022-151839/PPO_fvk1_v1_305.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -482,7 +482,7 @@ if __name__ == "__main__":
                 actions = agent.actor_mean(torch.Tensor(next_obs_norm_actor).to(device)).detach()
 
             # if step <= 300:
-            #     actions = torch.Tensor([[1.0]]) if (step // 20) % 2 == 0 else torch.Tensor([[-1.0]])
+            #     actions = torch.Tensor([[1.0]]) if (step // 10) % 2 == 0 else torch.Tensor([[-1.0]])
             # else:
             #     actions = torch.Tensor([[0.0]])
             # step += 1
