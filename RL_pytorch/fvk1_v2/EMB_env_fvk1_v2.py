@@ -242,14 +242,14 @@ class EMB_All_info_Env(gym.Env):
                 # self.back_reward += (100 * step_reward_scale.item()) ** 2
                 self.minus_reward += self.reward
             else:
-                self.reward = (100 * step_reward_scale.item()) ** 2 - 20 * (x0_new - self.dangerous_position) ** 2
+                self.reward = (100 * step_reward_scale.item()) ** 2 + 100 * abs(u) - 20 * (x0_new - self.dangerous_position) ** 2
         else:
             if self.count >= 300:
                 self.reward = - 15 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.6 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 # self.back_reward += (100 * step_reward_scale.item()) ** 2
                 self.minus_reward += self.reward 
             else:
-                self.reward = (100 * step_reward_scale.item()) ** 2
+                self.reward = (100 * step_reward_scale.item()) ** 2 + 100 * abs(u)
                 
         self.count += 1
         terminated = self.terminated
