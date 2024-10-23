@@ -157,9 +157,12 @@ class FI_matrix(object):
 
 # print(x)
 # # Start the simulation
-# for k in range(5):  # 350 = 0.35s
+# for k in range(10):  # 350 = 0.35s
 #     # u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
-#     u = -6
+#     u = 6
+#     # if k < 4:
+#     #     u = 6
+#     # else: u = -0.9 * (k - 5) + 4.7
 #     # if k > 150:
 #     #     u = 0
 #     dx = fi_matrix.f(x, u, theta)

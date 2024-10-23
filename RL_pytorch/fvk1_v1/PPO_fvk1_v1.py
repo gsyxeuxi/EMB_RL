@@ -438,7 +438,7 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        model_path = f"runs/EMB-fvk1-v1__ppo_fvk1_v1__1__20241022-224147/PPO_fvk1_v1_244.pth"
+        model_path = f"runs/EMB-fvk1-v1__ppo_fvk1_v1__1__20241022-v2-train/PPO_fvk1_v1_244.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env

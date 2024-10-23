@@ -224,11 +224,11 @@ class EMB_All_info_Env(gym.Env):
      
 
         # for test
-        # elif self.is_dangerous:
-        #     self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
+        elif self.is_dangerous:
+            self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
         else:
-            self.reward = (100 * step_reward_scale.item()) ** 2
-            # self.reward = 10000 * step_reward_scale.item()
+            # self.reward = (100 * step_reward_scale.item()) ** 2 + 10 * u
+            self.reward = 10000 * step_reward_scale.item()
         # a, b, d = FIM_upper_triangle[:]
         # print(a, b, d)
         # self.reward = (a + d) / (a * d - b**2)
@@ -236,19 +236,19 @@ class EMB_All_info_Env(gym.Env):
         # # variant 3
         # elif self.is_dangerous:
         #     if self.count >= 300:
-        #         self.reward =  - 0.2 * (x0_new - self.dangerous_position) ** 2 - \
-        #             0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
-        #         self.back_reward += 1000000 * step_reward_scale.item()
-        #         self.minus_reward += self.reward
+        #         self.reward =  - 20 * (x0_new - self.dangerous_position) ** 2 - \
+        #             15 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.6 * (x1_new - self.theta_dt[self.count-300]) ** 2
+        #         # self.back_reward += 1000000 * step_reward_scale.item()
+        #         # self.minus_reward += self.reward
         #     else:
-        #         self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
+        #         self.reward = (100 * step_reward_scale.item()) ** 2 + 100 * abs(u) - 20 * (x0_new - self.dangerous_position) ** 2
         # else:
         #     if self.count >= 300:
-        #         self.reward = - 0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
-        #         self.back_reward += 1000000 * step_reward_scale.item()
-        #         self.minus_reward += self.reward 
+        #         self.reward = - 15 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.6 * (x1_new - self.theta_dt[self.count-300]) ** 2
+        #         # self.back_reward += 1000000 * step_reward_scale.item()
+        #         # self.minus_reward += self.reward 
         #     else:
-        #         self.reward = 10000 * step_reward_scale.item()
+        #         self.reward = (100 * step_reward_scale.item()) ** 2 + 100 * abs(u) 
                 
         self.count += 1
         terminated = self.terminated
