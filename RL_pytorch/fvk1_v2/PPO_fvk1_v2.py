@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
-import EMB_env_fvk1_v1
+import EMB_env_fvk1_v2
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
@@ -24,9 +24,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
         help="the name of this experiment")
-    parser.add_argument("--env-id", type=str, default="EMB-fvk1-v1",
+    parser.add_argument("--env-id", type=str, default="EMB-fvk1-v2",
         help="the id of the environment")
-    parser.add_argument("--learning-rate", type=float, default=1e-3,
+    parser.add_argument("--learning-rate", type=float, default=5e-4,
         help="the learning rate of the optimizer")
     parser.add_argument("--seed", type=int, default=1,
         help="seed of the experiment")
@@ -91,7 +91,7 @@ def parse_args():
 
 def make_env(env_id, seed, idx, run_name):
     def thunk():
-        env = EMB_env_fvk1_v1.EMB_All_info_Env()
+        env = EMB_env_fvk1_v2.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
@@ -103,7 +103,7 @@ def make_env(env_id, seed, idx, run_name):
 
 def make_env_test(env_id, seed, idx, run_name):
     def thunk():
-        env = EMB_env_fvk1_v1.EMB_All_info_Env()
+        env = EMB_env_fvk1_v2.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         return env
@@ -438,7 +438,7 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        model_path = f"runs/EMB-fvk1-v1__PPO_fvk1_v1__1__20241022-151839/PPO_fvk1_v1_305.pth"
+        # model_path = f"runs/EMB-fvk1-v1__ppo_fvk1_v1__1__20241022-v2-train/PPO_fvk1_v1_244.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
@@ -482,7 +482,7 @@ if __name__ == "__main__":
                 actions = agent.actor_mean(torch.Tensor(next_obs_norm_actor).to(device)).detach()
 
             # if step <= 300:
-            #     actions = torch.Tensor([[1.0]]) if (step // 10) % 2 == 0 else torch.Tensor([[-1.0]])
+            #     actions = torch.Tensor([[1.0]]) if (step // 20) % 2 == 0 else torch.Tensor([[-1.0]])
             # else:
             #     actions = torch.Tensor([[0.0]])
             # step += 1

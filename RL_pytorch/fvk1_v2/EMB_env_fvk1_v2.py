@@ -11,14 +11,15 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fv_v11:
+EMB_env_fvk1_v2:
 the right model we want
 for actor: measured x1 and x2
 for critic: real x1 and x2 and k and fv and FIM
 sample fv and fv in obs
 h(x) = [x1, x2]
-force back to zero with reward function v3: quintic polynomial
+with force back to zero with reward function v3: quintic polynomial
 x1 x2 reset around 0
+use 100r^2 as reward
 ''' 
 def quintic_polynomial(t, coeff):
     return coeff[0] + coeff[1]*t + coeff[2]*t**2 + coeff[3]*t**3 + coeff[4]*t**4 + coeff[5]*t**5
@@ -219,34 +220,36 @@ class EMB_All_info_Env(gym.Env):
             10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
             10000logdet(M_0) = -1.842e5
             """
-            self.reward += (10000 * self.log_det_init.item() - 1e7)
+            # self.reward += (10000 * self.log_det_init.item() - 1e7)
+            self.reward -= 1e7
      
 
-        # for test
-        # elif self.is_dangerous:
-        #     self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
-        else:
-            self.reward = 10000 * step_reward_scale.item()
-        # a, b, d = FIM_upper_triangle[:]
-        # print(a, b, d)
-        # self.reward = (a + d) / (a * d - b**2)
-
-        # # variant 3
-        # elif self.is_dangerous:
-        #     if self.count >= 300:
-        #         self.reward =  - 0.2 * (x0_new - self.dangerous_position) ** 2 - \
-        #             0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
-        #         self.back_reward += 1000000 * step_reward_scale.item()
-        #         self.minus_reward += self.reward
-        #     else:
-        #         self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
+        # # for test
+        # # elif self.is_dangerous:
+        # #     self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
         # else:
-        #     if self.count >= 300:
-        #         self.reward = - 0.25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.01 * (x1_new - self.theta_dt[self.count-300]) ** 2
-        #         self.back_reward += 1000000 * step_reward_scale.item()
-        #         self.minus_reward += self.reward 
-        #     else:
-        #         self.reward = 10000 * step_reward_scale.item()
+        #     # self.reward = (100 * step_reward_scale.item()) ** 2
+        #     self.reward = 10000 * step_reward_scale.item()
+        # # a, b, d = FIM_upper_triangle[:]
+        # # print(a, b, d)
+        # # self.reward = (a + d) / (a * d - b**2)
+
+        # variant 3
+        elif self.is_dangerous:
+            if self.count >= 300:
+                self.reward =  - 20 * (x0_new - self.dangerous_position) ** 2 - \
+                    15 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.6 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                # self.back_reward += (100 * step_reward_scale.item()) ** 2
+                self.minus_reward += self.reward
+            else:
+                self.reward = (100 * step_reward_scale.item()) ** 2 - 20 * (x0_new - self.dangerous_position) ** 2
+        else:
+            if self.count >= 300:
+                self.reward = - 15 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.6 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                # self.back_reward += (100 * step_reward_scale.item()) ** 2
+                self.minus_reward += self.reward 
+            else:
+                self.reward = (100 * step_reward_scale.item()) ** 2
                 
         self.count += 1
         terminated = self.terminated
@@ -258,7 +261,7 @@ class EMB_All_info_Env(gym.Env):
             Sigma(r) = logdet(M_n) - logdet(M_0)
             10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
             """
-            self.reward += 10000 * self.log_det_init.item()
+            # self.reward += 10000 * self.log_det_init.item()
 
             # print('back_reward', self.back_reward)
             # print('minus_reward', self.minus_reward )
@@ -266,7 +269,7 @@ class EMB_All_info_Env(gym.Env):
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
                 # self.reward += self.back_reward
-                # self.reward += 10000
+                # self.reward += 1e5
                 print('************pos and vel back to zero***********')
             truncated = True
         else: truncated = False
