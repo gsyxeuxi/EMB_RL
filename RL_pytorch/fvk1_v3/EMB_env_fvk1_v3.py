@@ -109,14 +109,14 @@ class EMB_All_info_Env(gym.Env):
         self.chi = torch.zeros((2, 2), dtype=torch.float64)
         self.scale_factor = 1
         self.scale_factor_previous = 1
-        self.fi_info = torch.diag(torch.tensor([1e-4, 1e-4])) #initialize a small value
+        self.fi_info = torch.diag(torch.tensor([0.0, 0.0])) #initialize a small value
         self.det_init = torch.det(self.fi_info)
-
-        self.fi_info_scale = self.fi_info * self.scale_factor
-        self.fi_info_previous_scale = self.fi_info_scale
-        det_previous_scale = torch.det(self.fi_info_previous_scale)
-        self.log_det_previous_scale = torch.log(det_previous_scale)
-        self.log_det_init = self.log_det_previous_scale
+        self.det_previous = self.det_init
+        # self.fi_info_scale = self.fi_info * self.scale_factor
+        # self.fi_info_previous_scale = self.fi_info_scale
+        # det_previous_scale = torch.det(self.fi_info_previous_scale)
+        # self.log_det_previous_scale = torch.log(det_previous_scale)
+        # self.log_det_init = self.log_det_previous_scale
 
         # #for test if the scale is right
         # self.log_det_previous = torch.log(self.det_init)
@@ -146,35 +146,14 @@ class EMB_All_info_Env(gym.Env):
         fi_info_new = self.fi_matrix.fisher_info_matrix(dh_theta)
         self.fi_info += fi_info_new
 
-        #for test if the scale is right
-        # det_fi = torch.det(self.fi_info)
-        # log_det = torch.log(det_fi)
-        # step_reward = log_det -  self.log_det_previous
+        det_fi = torch.det(self.fi_info)
+        step_reward = (det_fi -  self.det_previous).item()
+        self.det_previous = det_fi
 
-
-        fi_info_new_scale = fi_info_new * self.scale_factor
-        self.fi_info_scale = self.fi_info_previous_scale + fi_info_new_scale
-        
         FIM_upper_triangle = []
         for i in range(self.fi_info.detach().numpy().shape[0]):
             for j in range(i, self.fi_info.detach().numpy().shape[1]):
                 FIM_upper_triangle.append(self.fi_info.detach().numpy()[i, j])
-
-        # self.fi_matrix.symmetrie_test(self.fi_info_scale)
-        det_fi_scale = torch.det(self.fi_info_scale)
-        log_det_scale = torch.log(det_fi_scale)
-        step_reward_scale = log_det_scale - self.log_det_previous_scale
-        self.scale_factor = (self.det_init / det_fi_scale) ** (1/2)
-        self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
-        self.log_det_previous_scale = torch.slogdet(self.fi_info_previous_scale)[1]
-        self.scale_factor_previous = self.scale_factor
-
-        # #for test if the scale is right
-        # self.log_det_previous = log_det
-        # print(step_reward_scale.item())
-        # print(step_reward.item())
-        # print("**************************")
-        # time.sleep(1)
 
         k_new = k + 1
         #update the state
@@ -221,7 +200,7 @@ class EMB_All_info_Env(gym.Env):
             10000logdet(M_0) = -1.842e5
             """
             # self.reward += (10000 * self.log_det_init.item() - 1e7)
-            self.reward -= 1e7
+            self.reward = -1e15
      
 
         # # for test
@@ -237,21 +216,21 @@ class EMB_All_info_Env(gym.Env):
         # variant 3
         elif self.is_dangerous:
             if self.count >= 300:
-                self.reward =  - 20 * (x0_new - self.dangerous_position) ** 2 - \
-                    10 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.4 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.reward =  - 2e7 * (x0_new - self.dangerous_position) ** 2 - \
+                    2.5e7 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1e6 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 # self.back_reward += (100 * step_reward_scale.item()) ** 2
                 self.minus_reward += self.reward
             else:
                 # self.reward = (100 * step_reward_scale.item()) ** 2 + 100 * abs(u) - 20 * (x0_new - self.dangerous_position) ** 2
-                self.reward = (100 * step_reward_scale.item()) ** 2 - 20 * (x0_new - self.dangerous_position) ** 2
+                self.reward = step_reward - 2e7 * (x0_new - self.dangerous_position) ** 2
         else:
             if self.count >= 300:
-                self.reward = - 10 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.4 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.reward = - 2.5e7 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1e6 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 # self.back_reward += (100 * step_reward_scale.item()) ** 2
                 self.minus_reward += self.reward 
             else:
                 # self.reward = (100 * step_reward_scale.item()) ** 2 + 100 * abs(u)
-                self.reward = (100 * step_reward_scale.item()) ** 2
+                self.reward = step_reward
                 
         self.count += 1
         terminated = self.terminated
@@ -265,9 +244,9 @@ class EMB_All_info_Env(gym.Env):
             """
             # self.reward += 10000 * self.log_det_init.item()
 
-            # print('back_reward', self.back_reward)
-            # print('minus_reward', self.minus_reward )
-            # print('difference', self.minus_reward+self.back_reward)
+            print('back_reward', self.back_reward)
+            print('minus_reward', self.minus_reward )
+            print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
                 # self.reward += self.back_reward
@@ -275,7 +254,6 @@ class EMB_All_info_Env(gym.Env):
                 print('************pos and vel back to zero***********')
             truncated = True
         else: truncated = False
-      
         return self.state, self.reward, terminated, truncated, {}
     
     def render(self, mode='human'):

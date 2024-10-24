@@ -430,7 +430,7 @@ if __name__ == "__main__":
             print("SPS:", int(global_step / (time.time() - start_time)))
             writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-            if update!=0 and update%100==0 and args.save_model:
+            if update!=0 and update%50==0 and args.save_model:
                 print('savedddddddddddddddddddddddddddddddddd')
                 save_model(update)
 
