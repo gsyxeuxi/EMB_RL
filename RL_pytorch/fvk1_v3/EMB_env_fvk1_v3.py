@@ -11,7 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fvk1_v2:
+EMB_env_fvk1_v3:
 the right model we want
 for actor: measured x1 and x2
 for critic: real x1 and x2 and k and fv and FIM
@@ -19,7 +19,7 @@ sample fv and fv in obs
 h(x) = [x1, x2]
 with force back to zero with reward function v3: quintic polynomial
 x1 x2 reset around 0
-use 100r^2 as reward
+no log reward
 ''' 
 def quintic_polynomial(t, coeff):
     return coeff[0] + coeff[1]*t + coeff[2]*t**2 + coeff[3]*t**3 + coeff[4]*t**4 + coeff[5]*t**5
