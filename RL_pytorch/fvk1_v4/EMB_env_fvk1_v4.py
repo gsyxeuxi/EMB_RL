@@ -11,7 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fvk1_v3:
+EMB_env_fvk1_v4:
 the right model we want
 for actor: measured x1 and x2
 for critic: real x1 and x2 and k and fv and FIM
@@ -19,7 +19,7 @@ sample fv and fv in obs
 h(x) = [x1, x2]
 with force back to zero with reward function v3: quintic polynomial
 x1 x2 reset around 0
-no log reward
+EV reward
 ''' 
 def quintic_polynomial(t, coeff):
     return coeff[0] + coeff[1]*t + coeff[2]*t**2 + coeff[3]*t**3 + coeff[4]*t**4 + coeff[5]*t**5
@@ -110,8 +110,7 @@ class EMB_All_info_Env(gym.Env):
         self.scale_factor = 1
         self.scale_factor_previous = 1
         self.fi_info = torch.diag(torch.tensor([0.0, 0.0])) #initialize a small value
-        self.det_init = torch.det(self.fi_info)
-        self.det_previous = self.det_init
+        self.min_eigval_previous = torch.tensor([0.0])
 
         # self.fi_info_scale = self.fi_info * self.scale_factor
         # self.fi_info_previous_scale = self.fi_info_scale
@@ -146,10 +145,10 @@ class EMB_All_info_Env(gym.Env):
         dh_theta = self.fi_matrix.sensitivity_y(self.chi, J_h)
         fi_info_new = self.fi_matrix.fisher_info_matrix(dh_theta)
         self.fi_info += fi_info_new
-
-        det_fi = torch.det(self.fi_info)
-        step_reward = (det_fi -  self.det_previous).item()
-        self.det_previous = det_fi
+        eigvals = torch.linalg.eigvals(self.fi_info).real
+        min_eigval = eigvals.min()
+        step_reward = (min_eigval - self.min_eigval_previous).item()
+        self.min_eigval_previous = min_eigval
 
         FIM_upper_triangle = []
         for i in range(self.fi_info.detach().numpy().shape[0]):
@@ -201,46 +200,46 @@ class EMB_All_info_Env(gym.Env):
             10000logdet(M_0) = -1.842e5
             """
             # self.reward += (10000 * self.log_det_init.item() - 1e7)
-            self.reward = -1e14
+            self.reward = -1e7
      
 
         # for test
-        # elif self.is_dangerous:
-        #     self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
-        # else:
-        #     # self.reward = (100 * step_reward_scale.item()) ** 2
-        #     self.reward = 10000 * step_reward_scale.item()
+        elif self.is_dangerous:
+            self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2
+        else:
+            # self.reward = (100 * step_reward_scale.item()) ** 2
+            self.reward = step_reward
         # # a, b, d = FIM_upper_triangle[:]
         # # print(a, b, d)
         # # self.reward = (a + d) / (a * d - b**2)
 
-        # variant 3
-        elif self.is_dangerous:
-            if self.count >= 300:
-                self.reward =  - 2e5 * (x0_new - self.dangerous_position) ** 2 - \
-                    5e5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 2e4 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += step_reward
-                self.minus_reward += self.reward
-            else:
-                self.reward = step_reward - 2e5 * (x0_new - self.dangerous_position) ** 2
-        else:
-            if self.count >= 300:
-                self.reward = - 5e5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 2e4 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += step_reward
-                self.minus_reward += self.reward 
-            else:
-                self.reward = step_reward
+        # # variant 3
+        # elif self.is_dangerous:
+        #     if self.count >= 300:
+        #         self.reward =  - 2e7 * (x0_new - self.dangerous_position) ** 2 - \
+        #             5e7 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 2e6 * (x1_new - self.theta_dt[self.count-300]) ** 2
+        #         self.back_reward += step_reward
+        #         self.minus_reward += self.reward
+        #     else:
+        #         self.reward = step_reward - 2e7 * (x0_new - self.dangerous_position) ** 2
+        # else:
+        #     if self.count >= 300:
+        #         self.reward = - 5e7 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 2e6 * (x1_new - self.theta_dt[self.count-300]) ** 2
+        #         self.back_reward += step_reward
+        #         self.minus_reward += self.reward 
+        #     else:
+        #         self.reward = step_reward
                 
         self.count += 1
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
-            print('back_reward', self.back_reward)
-            print('minus_reward', self.minus_reward )
-            print('difference', self.minus_reward+self.back_reward)
+            # print('back_reward', self.back_reward)
+            # print('minus_reward', self.minus_reward )
+            # print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
-                self.reward += self.back_reward
+                # self.reward += self.back_reward
                 # self.reward += 1e5
                 print('************pos and vel back to zero***********')
             truncated = True
