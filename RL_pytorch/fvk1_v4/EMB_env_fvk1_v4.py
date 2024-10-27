@@ -51,7 +51,7 @@ class EMB_All_info_Env(gym.Env):
         self.k1_range_low = 25
         self.pos_reset_range_high = 0.5
         self.vel_reset_range_high= 2.5
-        self.dangerous_position = 90
+        self.dangerous_position = 80
         self.reset_num = 0
         self.pos_std = 0.001
         self.vel_std = 1.0
@@ -200,35 +200,35 @@ class EMB_All_info_Env(gym.Env):
             10000logdet(M_0) = -1.842e5
             """
             # self.reward += (10000 * self.log_det_init.item() - 1e7)
-            self.reward = -1e7
+            self.reward = -1e6
      
 
         # for test
-        elif self.is_dangerous:
-            self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2
-        else:
-            # self.reward = (100 * step_reward_scale.item()) ** 2
-            self.reward = step_reward
+        # elif self.is_dangerous:
+        #     self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2
+        # else:
+        #     # self.reward = (100 * step_reward_scale.item()) ** 2
+        #     self.reward = step_reward
         # # a, b, d = FIM_upper_triangle[:]
         # # print(a, b, d)
         # # self.reward = (a + d) / (a * d - b**2)
 
-        # # variant 3
-        # elif self.is_dangerous:
-        #     if self.count >= 300:
-        #         self.reward =  - 2e7 * (x0_new - self.dangerous_position) ** 2 - \
-        #             5e7 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 2e6 * (x1_new - self.theta_dt[self.count-300]) ** 2
-        #         self.back_reward += step_reward
-        #         self.minus_reward += self.reward
-        #     else:
-        #         self.reward = step_reward - 2e7 * (x0_new - self.dangerous_position) ** 2
-        # else:
-        #     if self.count >= 300:
-        #         self.reward = - 5e7 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 2e6 * (x1_new - self.theta_dt[self.count-300]) ** 2
-        #         self.back_reward += step_reward
-        #         self.minus_reward += self.reward 
-        #     else:
-        #         self.reward = step_reward
+        # variant 3
+        elif self.is_dangerous:
+            if self.count >= 300:
+                self.reward =  - 4 * (x0_new - self.dangerous_position) ** 2 - \
+                    5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.back_reward += step_reward
+                self.minus_reward += self.reward
+            else:
+                self.reward = step_reward - 4 * (x0_new - self.dangerous_position) ** 2
+        else:
+            if self.count >= 300:
+                self.reward = - 5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.back_reward += step_reward
+                self.minus_reward += self.reward 
+            else:
+                self.reward = step_reward
                 
         self.count += 1
         terminated = self.terminated

@@ -29,7 +29,7 @@ def parse_args():
         help="the learning rate of the optimizer")
     parser.add_argument("--seed", type=int, default=1,
         help="seed of the experiment")
-    parser.add_argument("--total-timesteps", type=int, default=1000000,
+    parser.add_argument("--total-timesteps", type=int, default=2000000,
         help="total timesteps of the experiments")
     parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="if toggled, `torch.backends.cudnn.deterministic=False`")
@@ -436,7 +436,7 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241018-train-nobackreward/PPO_fv_v11_244.pth"
+        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__1__20241016-train/PPO_fv_v11_244.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env
