@@ -239,7 +239,7 @@ class EMB_All_info_Env(gym.Env):
             # print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
-                # self.reward += self.back_reward
+                self.reward += self.back_reward
                 # self.reward += 1e5
                 print('************pos and vel back to zero***********')
             truncated = True

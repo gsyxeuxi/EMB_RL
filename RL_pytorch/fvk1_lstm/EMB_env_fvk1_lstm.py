@@ -6,19 +6,20 @@ import time
 import torch
 import math
 import random
-from EMB_model_fv_v2 import FI_matrix
+from EMB_model_fvk1_v1 import FI_matrix
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fv_v11:
+EMB_env_fvk1_lstm:
 the right model we want
 for actor: measured x1 and x2
 for critic: real x1 and x2 and k and fv and FIM
 sample fv and fv in obs
 h(x) = [x1, x2]
-force back to zero with reward function v3: quintic polynomial
+with force back to zero with reward function v3: quintic polynomial
 x1 x2 reset around 0
+EV reward
 ''' 
 def quintic_polynomial(t, coeff):
     return coeff[0] + coeff[1]*t + coeff[2]*t**2 + coeff[3]*t**3 + coeff[4]*t**4 + coeff[5]*t**5
@@ -33,7 +34,7 @@ class EMB_All_info_Env(gym.Env):
     def __init__(self) -> None:
         self.fi_matrix = FI_matrix()
         self._dt = 0.001
-        self.max_env_steps = 500
+        self.max_env_steps = 500 #500 by single parameter
         self.count = 0 
         self.reward = None
         self.current = None # input u
@@ -46,26 +47,27 @@ class EMB_All_info_Env(gym.Env):
         self.velocity_range = (-500, 500)
         self.fv_range_high = 5e-5
         self.fv_range_low = 1e-5
+        self.k1_range_high = 50
+        self.k1_range_low = 25
         self.pos_reset_range_high = 0.5
         self.vel_reset_range_high= 2.5
-        self.dangerous_position = 75
+        self.dangerous_position = 80
         self.reset_num = 0
         self.pos_std = 0.001
         self.vel_std = 1.0
         # *************************************************** Define the Observation Space ***************************************************
         """
-        An 7-Dim Space: [pos, vel, pos_noise, vel_noise, time setp index k, fv, FIM element]
+        An 10-Dim Space: [pos, vel, pos_noise, vel_noise, time setp index k, fv, k1, [FIM element]]
         """
-        high = np.array([100, 500, 100, 500, 400, 5e-5, 1e10], dtype=np.float64)
-        low = np.array([-10, -500, -10, -500, 0, 1e-5, 0], dtype=np.float64)
-        self.observation_space = gym.spaces.Box(low=low, high=high, shape=(7,), dtype=np.float64)   
+        high = np.array([100, 500, 100, 500, 400, 5e-5, 50, 1e10, 1e10, 1e10], dtype=np.float64)
+        low = np.array([-10, -500, -10, -500, 0, 1e-5, 25, -1e10, -1e10, -1e10], dtype=np.float64)
+        self.observation_space = gym.spaces.Box(low=low, high=high, shape=(10,), dtype=np.float64)   
 
         # *************************************************** Define the Action Space ***************************************************
         """
         A 1-Dim Space: Control the voltage of motor
         """
-        self.action_space = gym.spaces.Box(low=-self.max_action, high=self.max_action, shape=(1,), dtype=np.float64)  
-        self.total_reward_scale = 0      
+        self.action_space = gym.spaces.Box(low=-self.max_action, high=self.max_action, shape=(1,), dtype=np.float64)      
         
     @property
     def terminated(self):
@@ -90,31 +92,35 @@ class EMB_All_info_Env(gym.Env):
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
-
+        self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
         self.state[0] = self.state[2] = random.uniform(-self.pos_reset_range_high, self.pos_reset_range_high)
         self.state[1] = self.state[3] = random.uniform(-self.vel_reset_range_high, self.vel_reset_range_high)
 
-        # if sample the fv
+        # if sample the parameter
         self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
-        
+        self.state[6] = random.uniform(self.k1_range_low, self.k1_range_high)
+
         # # if the fv increase continiues
         # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
         # self.reset_num += 1
  
         self.count = 0
         observation = self._get_obs()
-
-        self.chi = torch.zeros((2, 1), dtype=torch.float64)
+        self.chi = torch.zeros((2, 2), dtype=torch.float64)
         self.scale_factor = 1
         self.scale_factor_previous = 1
-        self.fi_info = torch.zeros((1,1), dtype=torch.float64)
-        self.det_init = torch.det(self.fi_info)
+        self.fi_info = torch.diag(torch.tensor([0.0, 0.0])) #initialize a small value
+        self.min_eigval_previous = torch.tensor([0.0])
+
         # self.fi_info_scale = self.fi_info * self.scale_factor
         # self.fi_info_previous_scale = self.fi_info_scale
         # det_previous_scale = torch.det(self.fi_info_previous_scale)
         # self.log_det_previous_scale = torch.log(det_previous_scale)
-        # self.total_reward_scale = self.log_det_previous_scale
+        # self.log_det_init = self.log_det_previous_scale
+
+        # #for test if the scale is right
+        # self.log_det_previous = torch.log(self.det_init)
+
         self.back_reward = 0
         self.minus_reward = 0
         self.find_polynomial = True
@@ -122,43 +128,32 @@ class EMB_All_info_Env(gym.Env):
 
     def step(self, action):
         # ************get observation space:************
-        x0, x1, _, _, k, theta, sv = self._get_obs() # real state from last lime
+        x0, x1, _, _, k, fv, k1, _, _, _ = self._get_obs() # real state from last lime
         x = torch.tensor([x0, x1], dtype=torch.float64)
         u = self.action_fact * action.item() #input current
-        dx = self.fi_matrix.f(x, u, torch.tensor([theta], dtype=torch.float64))
+        dx = self.fi_matrix.f(x, u, torch.tensor([fv, k1], dtype=torch.float64))
         x = x + self._dt * dx
         x0_new, x1_new = x[0].item(), x[1].item() #for plot
-
         x0_noise = x0_new + np.random.normal(0, self.pos_std)
         x1_noise = x1_new + np.random.normal(0, self.vel_std)
 
-        jacobian = self.fi_matrix.jacobian(x, u, torch.tensor([theta], dtype=torch.float64))
+        jacobian = self.fi_matrix.jacobian(x, u, torch.tensor([fv, k1], dtype=torch.float64))
         J_f = jacobian[0]
         J_h = self.fi_matrix.jacobian_h(x)
         df_theta = jacobian[1]
         self.chi = self.fi_matrix.sensitivity_x(J_f, df_theta, self.chi)
         dh_theta = self.fi_matrix.sensitivity_y(self.chi, J_h)
         fi_info_new = self.fi_matrix.fisher_info_matrix(dh_theta)
-        step_reward = fi_info_new.item()
         self.fi_info += fi_info_new
-        # fi_info_new_scale = fi_info_new * self.scale_factor
-        # self.fi_info_scale = self.fi_info_previous_scale + fi_info_new_scale
-        
-        # FIM_upper_triangle = []
-        # for i in range(np.array(self.fi_info_scale).shape[0]):
-        #     for j in range(i, np.array(self.fi_info_scale).shape[1]):
-        #         FIM_upper_triangle.append(np.array(self.fi_info_scale)[i, j])
-        
-        # s1_new, s2_new, s3_new, s4_new = upper_triangle_elements[:]
+        eigvals = torch.linalg.eigvals(self.fi_info).real
+        min_eigval = eigvals.min()
+        step_reward = (min_eigval - self.min_eigval_previous).item()
+        self.min_eigval_previous = min_eigval
 
-        # self.fi_matrix.symmetrie_test(self.fi_info_scale)
-        # det_fi_scale = torch.det(self.fi_info_scale)
-        # log_det_scale = torch.log(det_fi_scale)
-        # step_reward_scale = log_det_scale - self.log_det_previous_scale
-        # self.scale_factor = (self.det_init / det_fi_scale) ** (1/4)
-        # self.fi_info_previous_scale = (self.fi_info_scale / self.scale_factor_previous) * self.scale_factor
-        # self.log_det_previous_scale = torch.slogdet(self.fi_info_previous_scale)[1]
-        # self.scale_factor_previous = self.scale_factor
+        FIM_upper_triangle = []
+        for i in range(self.fi_info.detach().numpy().shape[0]):
+            for j in range(i, self.fi_info.detach().numpy().shape[1]):
+                FIM_upper_triangle.append(self.fi_info.detach().numpy()[i, j])
 
         k_new = k + 1
         #update the state
@@ -167,7 +162,7 @@ class EMB_All_info_Env(gym.Env):
         self.state[2] = x0_noise
         self.state[3] = x1_noise
         self.state[4] = k_new
-        self.state[-1] = self.fi_info
+        self.state[-3:] = FIM_upper_triangle[:]
 
         # ************calculate the polynomial************
         if self.count >= 300 and self.find_polynomial:
@@ -197,26 +192,39 @@ class EMB_All_info_Env(gym.Env):
         
         # ************calculate the rewards************
         if not self.is_safe:
-            self.reward = -1e7 #4e4
+            """
+            Get the real logdetFIM back:
+            r = logdet(M_k+1) - logdet(M_k)
+            Sigma(r) = logdet(M_n) - logdet(M_0)
+            10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
+            10000logdet(M_0) = -1.842e5
+            """
+            # self.reward += (10000 * self.log_det_init.item() - 1e7)
+            self.reward = -1e6
+     
 
-        # # for test
+        # for test
         # elif self.is_dangerous:
-        #     self.reward = step_reward - 200 * (x0_new - self.dangerous_position) ** 2
+        #     self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2
         # else:
+        #     # self.reward = (100 * step_reward_scale.item()) ** 2
         #     self.reward = step_reward
+        # # a, b, d = FIM_upper_triangle[:]
+        # # print(a, b, d)
+        # # self.reward = (a + d) / (a * d - b**2)
 
         # variant 3
         elif self.is_dangerous:
             if self.count >= 300:
-                self.reward =  - 20 * (x0_new - self.dangerous_position) ** 2 - \
-                    25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.reward =  - 4 * (x0_new - self.dangerous_position) ** 2 - \
+                    5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
-                self.minus_reward += self.reward 
+                self.minus_reward += self.reward
             else:
-                self.reward = step_reward - 300 * (x0_new - self.dangerous_position) ** 2 #300
+                self.reward = step_reward - 4 * (x0_new - self.dangerous_position) ** 2
         else:
             if self.count >= 300:
-                self.reward = - 25 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 1 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.reward = - 5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
                 self.minus_reward += self.reward 
             else:
@@ -226,13 +234,16 @@ class EMB_All_info_Env(gym.Env):
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
+            # print('back_reward', self.back_reward)
+            # print('minus_reward', self.minus_reward )
+            # print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
                 self.reward += self.back_reward
+                # self.reward += 1e5
                 print('************pos and vel back to zero***********')
             truncated = True
         else: truncated = False
-      
         return self.state, self.reward, terminated, truncated, {}
     
     def render(self, mode='human'):
