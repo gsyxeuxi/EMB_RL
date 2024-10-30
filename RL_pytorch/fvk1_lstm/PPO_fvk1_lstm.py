@@ -206,6 +206,18 @@ def draw_action_reward(action_buffers, reward_buffers):
 class Agent(nn.Module):
     def __init__(self, envs):
         super(Agent, self).__init__()
+        self.network = nn.Sequential(
+            layer_init(nn.Linear(envs.single_observation_space.shape[0],64)),
+            nn.ReLU(),
+            layer_init(nn.Linear(64,64)),
+            nn.ReLU(),
+        )
+
+
+
+
+        
+
         self.critic = nn.Sequential(
             layer_init(nn.Linear(7, 64)),
             nn.Tanh(),
