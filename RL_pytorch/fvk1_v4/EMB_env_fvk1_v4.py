@@ -217,14 +217,14 @@ class EMB_All_info_Env(gym.Env):
         elif self.is_dangerous:
             if self.count >= 300:
                 self.reward =  - 4 * (x0_new - self.dangerous_position) ** 2 - \
-                    10 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                    5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
                 self.minus_reward += self.reward
             else:
                 self.reward = step_reward - 4 * (x0_new - self.dangerous_position) ** 2
         else:
             if self.count >= 300:
-                self.reward = - 10 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
+                self.reward = - 5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
                 self.back_reward += step_reward
                 self.minus_reward += self.reward 
             else:
