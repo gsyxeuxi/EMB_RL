@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
-import EMB_env_fvk1_lstm
+import EMB_env_fvk1_v4_test
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
@@ -24,7 +24,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
         help="the name of this experiment")
-    parser.add_argument("--env-id", type=str, default="EMB-fvk1-lstm",
+    parser.add_argument("--env-id", type=str, default="EMB-fvk1-v4",
         help="the id of the environment")
     parser.add_argument("--learning-rate", type=float, default=5e-4,
         help="the learning rate of the optimizer")
@@ -91,7 +91,7 @@ def parse_args():
 
 def make_env(env_id, seed, idx, run_name):
     def thunk():
-        env = EMB_env_fvk1_lstm.EMB_All_info_Env()
+        env = EMB_env_fvk1_v4_test.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
@@ -103,7 +103,7 @@ def make_env(env_id, seed, idx, run_name):
 
 def make_env_test(env_id, seed, idx, run_name):
     def thunk():
-        env = EMB_env_fvk1_lstm.EMB_All_info_Env()
+        env = EMB_env_fvk1_v4_test.EMB_All_info_Env()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         return env
@@ -206,22 +206,20 @@ def draw_action_reward(action_buffers, reward_buffers):
 class Agent(nn.Module):
     def __init__(self, envs):
         super(Agent, self).__init__()
-        self.network = nn.Sequential(
-            layer_init(nn.Linear(envs.single_observation_space.shape[0],64)),
-            nn.ReLU(),
-            layer_init(nn.Linear(64,64)),
-            nn.ReLU(),
+        self.critic = nn.Sequential(
+            layer_init(nn.Linear(7, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 1), std=1.0),
         )
-        # LSTM layer for temporal dependencies
-        self.lstm = nn.LSTM(64, 64)
-        for name, param in self.lstm.named_parameters():
-            if "bias" in name:
-                nn.init.constant_(param, 0)
-            elif "weight" in name:
-                nn.init.orthogonal_(param, 1.0)
-
-        self.critic = layer_init(nn.Linear(64, 1), std=1.0)
-        self.actor_mean = layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01)
+        self.actor_mean = nn.Sequential(
+            layer_init(nn.Linear(3, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01),
+        )
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
     def get_value(self, x):
@@ -440,7 +438,7 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fvk1-v4__ppo_fvk1_v4__1492__20241029-121854/ppo_fvk1_v4_100.pth"
+        model_path = f"runs/EMB-fvk1-v4__ppo_fvk1_v4__1492__20241029-5e-4-cp0.25-5m-backreward/ppo_fvk1_v4_610.pth"
         epsilon = 1e-8
         eval_episodes = 6
         # use the rms in the first env

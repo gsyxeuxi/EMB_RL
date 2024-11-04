@@ -51,7 +51,7 @@ class EMB_All_info_Env(gym.Env):
         self.k1_range_low = 25
         self.pos_reset_range_high = 0.5
         self.vel_reset_range_high= 2.5
-        self.dangerous_position = 80
+        self.dangerous_position = 85
         self.reset_num = 0
         self.pos_std = 0.001
         self.vel_std = 1.0
@@ -199,36 +199,16 @@ class EMB_All_info_Env(gym.Env):
             10000logdet(M_n) = 10000Sigma(r) + 10000logdet(M_0)
             10000logdet(M_0) = -1.842e5
             """
-            self.reward = -1e6 #1e6
-     
-        # variant 3
-        elif self.is_dangerous:
-            if self.count >= 300:
-                self.reward =  - 4 * (x0_new - self.dangerous_position) ** 2 - \
-                    5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += step_reward
-                self.minus_reward += self.reward
-            else:
-                self.reward = step_reward - 4 * (x0_new - self.dangerous_position) ** 2
+            self.reward = -1e6
         else:
-            if self.count >= 300:
-                self.reward = - 5 * (x0_new - self.theta_vals[self.count-300]) ** 2 - 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2
-                self.back_reward += step_reward
-                self.minus_reward += self.reward 
-            else:
-                self.reward = step_reward
-                
+            self.reward = step_reward
+        
         self.count += 1
         terminated = self.terminated
 
         if self.count == self.max_env_steps:
-            # print('back_reward', self.back_reward)
-            # print('minus_reward', self.minus_reward )
-            # print('difference', self.minus_reward+self.back_reward)
             # sparse reward
             if abs(x0_new) <= 1.2 and abs(x1_new) <= 6:
-                self.reward += self.back_reward
-                # self.reward += 1e5
                 print('************pos and vel back to zero***********')
             truncated = True
         else: truncated = False
@@ -239,12 +219,3 @@ class EMB_All_info_Env(gym.Env):
         
     def close(self):
         return None
-
-# env = EMB_All_info_Env()
-# env.reset()
-# total_reward = 0
-# for k in range(500):
-#     u = torch.Tensor([0.1])
-#     next_obs, reward, terminations, truncations, infos = env.step(u)
-#     total_reward += reward
-# print(total_reward)

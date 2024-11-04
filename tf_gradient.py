@@ -2,22 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 import torch
-cont =21
-if cont <= 300:
-    actions = torch.Tensor([[1.0]]) if (cont // 20) % 2 == 0 else torch.Tensor([[-1.0]])
-else:
-    actions = torch.Tensor([[0.0]])
+# cont =21
+# if cont <= 300:
+#     actions = torch.Tensor([[1.0]]) if (cont // 20) % 2 == 0 else torch.Tensor([[-1.0]])
+# else:
+#     actions = torch.Tensor([[0.0]])
 
-print(actions)
+# print(actions)
 
 
-# pos_start = 62.3297
-# vel_start = -424.8071
+# pos_start = 34.3
+# vel_start = -471
 # pos_end = 0
 # vel_end = 0
 # acc_start = 0
 # acc_end = 0
-# t_start = 0.3
+# t_start = 0.43
 # t_end = 0.5
 
 # A = np.array([
@@ -43,7 +43,7 @@ print(actions)
 #     return coeff[1] + 2*coeff[2]*t + 3* coeff[3]*t**2 + 4*coeff[4]*t**3 + 5*coeff[5]*t**4
 
 # # 时间范围
-# t_vals = np.linspace(0.3, 0.5, 200)
+# t_vals = np.linspace(0.43, 0.5, 200)
 
 # # 计算每个时间点对应的角度值
 # theta_vals = [quintic_polynomial(t, coeff) for t in t_vals]
@@ -71,3 +71,7 @@ print(actions)
 
 # plt.tight_layout()
 # plt.show()
+
+
+
+
