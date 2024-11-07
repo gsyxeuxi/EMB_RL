@@ -217,6 +217,32 @@ class EMB_All_info_Env(gym.Env):
                 self.minus_reward += self.reward 
             else:
                 self.reward = step_reward
+        
+        # # variant 4
+        # elif self.is_dangerous:
+        #     if self.count < 300:
+        #         self.reward = step_reward - 4 * (x0_new - self.dangerous_position) ** 2
+        #     elif self.count < 450:
+        #         self.reward =  - 4 * (x0_new - self.dangerous_position) ** 2 - \
+        #             (5 * (x0_new - self.theta_vals[self.count-300]) ** 2 + 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2) * 0.5
+        #         self.back_reward += step_reward
+        #         self.minus_reward += self.reward
+        #     else:
+        #         self.reward =  - 4 * (x0_new - self.dangerous_position) ** 2 - \
+        #             (10 * (1 - ((self.count - 450) / 50)**2) * x0_new ** 2 + 0.02 * ((self.count - 450) / 50) ** 2 * x1_new ** 2) * 0.1
+        #         self.back_reward += step_reward
+        #         self.minus_reward += self.reward
+        # else:
+        #     if self.count < 300:
+        #         self.reward = step_reward
+        #     elif self.count < 450:
+        #         self.reward = - (5 * (x0_new - self.theta_vals[self.count-300]) ** 2 + 0.2 * (x1_new - self.theta_dt[self.count-300]) ** 2) * 0.5
+        #         self.back_reward += step_reward
+        #         self.minus_reward += self.reward
+        #     else:
+        #         self.reward =  - (10 * (1 - ((self.count - 450) / 50)**2) * x0_new ** 2 + 0.02 * ((self.count - 450) / 50) ** 2 * x1_new ** 2) * 0.1
+        #         self.back_reward += step_reward
+        #         self.minus_reward += self.reward
                 
         self.count += 1
         terminated = self.terminated

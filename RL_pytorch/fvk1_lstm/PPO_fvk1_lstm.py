@@ -224,6 +224,25 @@ class Agent(nn.Module):
         self.actor_mean = layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01)
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
+    def get_state(self, x, lstm_state, done):
+        hidden = self.network(x)
+        # LSTM processing with handling of 'done' flags
+        batch_size = lstm_state[0].shape[1]
+        hidden = hidden.reshape((-1, batch_size, self.lstm.input_size))
+        done = done.reshape((-1, batch_size))
+        new_hidden = []
+        for h, d in zip(hidden, done):
+            h, lstm_state = self.lstm(
+                h.unsqueeze(0),
+                (
+                    (1.0 - d).view(1, -1, 1) * lstm_state[0],
+                    (1.0 - d).view(1, -1, 1) * lstm_state[1],
+                ),
+            )
+            new_hidden += [h]
+        new_hidden = torch.flatten(torch.cat(new_hidden), 0, 1)
+        return new_hidden, lstm_state
+    
     def get_value(self, x):
         return self.critic(torch.cat((x[:, :2], x[:, -5:]), dim=1))
 
