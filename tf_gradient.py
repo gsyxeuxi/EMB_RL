@@ -8,20 +8,20 @@ import torch
 # else:
 #     actions = torch.Tensor([[0.0]])
 
-print(0.02 * ((460 - 450) / 50)**2 * 300 ** 2)
-print(5 * (1 - ((460 - 450) / 50))**2 * 30 ** 2)
+# print(0.02 * ((460 - 450) / 50)**2 * 300 ** 2)
+# print(5 * (1 - ((460 - 450) / 50))**2 * 30 ** 2)
 
-print(0.02 * ((490 - 450) / 50)**2 * 300 ** 2)
-print(5 * (1 - ((490 - 450) / 50))**2 * 30 ** 2)
+# print(0.02 * ((490 - 450) / 50)**2 * 300 ** 2)
+# print(5 * (1 - ((490 - 450) / 50))**2 * 30 ** 2)
 
 
-pos_start = 25.4
-vel_start = -391.95
+pos_start = 65.4
+vel_start = -331.95
 pos_end = 0
 vel_end = 0
 acc_start = 0
 acc_end = 0
-t_start = 0.45
+t_start = 0.3
 t_end = 0.5
 
 A = np.array([
@@ -47,7 +47,7 @@ def quintic_polynomial_dt(t, coeff):
     return coeff[1] + 2*coeff[2]*t + 3* coeff[3]*t**2 + 4*coeff[4]*t**3 + 5*coeff[5]*t**4
 
 # 时间范围
-t_vals = np.linspace(0.45, 0.5, 200)
+t_vals = np.linspace(0.3, 0.5, 200)
 
 # 计算每个时间点对应的角度值
 theta_vals = [quintic_polynomial(t, coeff) for t in t_vals]
