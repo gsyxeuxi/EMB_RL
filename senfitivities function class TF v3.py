@@ -142,7 +142,7 @@ det_previous = tf.linalg.det(fi_info)
 print('det = ', det_previous)
 total_reward_log = 0
 
-for k in range(3): #350 = 0.35s
+for k in range(350): #350 = 0.35s
     #case1: sinus input
     u = tf.Variable(2 + 2 * tf.math.sin(2*pi*k/100 - pi/2), dtype=tf.float64)
     # case2: slope

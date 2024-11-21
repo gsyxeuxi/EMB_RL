@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import torch
 from torch.distributions.normal import Normal
 import math
@@ -28,10 +29,10 @@ class FI_matrix(object):
 
     def f(self, x, u, theta):
         x1, x2 = x[0], x[1]
-        fv = theta[0]
-        km = self.km
-        k1 = self.k1
-        fc = self.fc
+        fv = theta[3]
+        km = theta[0]
+        k1 = theta[1]
+        fc = theta[2]
         dx1 = x2
         Tm = km * u
         Tl = self.gamma * k1 * torch.max(x1, torch.tensor(0.0, dtype=torch.float64))
@@ -135,17 +136,29 @@ class FI_matrix(object):
 
 # Initial state
 x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
-chi = torch.zeros((2, 1), dtype=torch.float64)
-# fi_info = torch.eye(1, dtype=torch.float64) * 1e-6
-fi_info = torch.zeros((1,1), dtype=torch.float64)
+chi = torch.zeros((2, 4), dtype=torch.float64)
+fi_info = torch.eye(4, dtype=torch.float64) * 1e-4
+# fi_info = torch.diag(torch.tensor([0.0, 0.0, 0.0, 0.0]))
 det_T = 0.001  # Time step
-theta = torch.tensor([2.16e-5], dtype=torch.float64)
+# theta = torch.tensor([2.16e-5], dtype=torch.float64)
+theta = torch.tensor([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=torch.float64)
+
+u_values = []
+x0_values = []
+x1_values = []
+time_values = []
+det_fi_values = []
+reward_values = []
+cond_values = []
+log_dets = []
+# log_dets_10 = []
+sensitivity_y = []
 
 fi_matrix = FI_matrix()
 x = x_0
 pi = torch.tensor(math.pi, dtype=torch.float64)
-scale_factor = 1.0
-scale_factor_previous = 1.0
+scale_factor = 1
+scale_factor_previous = 1
 det_init = torch.det(fi_info)
 fi_info_scale = fi_info * scale_factor
 fi_info_previous_scale = fi_info_scale
@@ -154,19 +167,22 @@ log_det_previous_scale = torch.log(det_previous_scale)
 total_reward_scale = log_det_previous_scale
 
 # Start the simulation
-for k in range(500):  # 350 = 0.35s
+for k in range(200):  # 350 = 0.35s
     # u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
-    u = 0.5
-    if k > 200:
-        u = 0
+    # u2 = torch.tensor(6*k/500, dtype=torch.float64)
+    u = torch.tensor(2, dtype=torch.float64)
+    # u = 0.5
     dx = fi_matrix.f(x, u, theta)
     x = x + det_T * dx
-    print(x)
+    u_values.append(u.item())
+    x0_values.append(x[0])
+    x1_values.append(x[1])
+    time_values.append((k+1))
     J_f, df_theta = fi_matrix.jacobian(x, u, theta)
     J_h = fi_matrix.jacobian_h(x)
     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
-    print('chi', chi)
-    print("**********", k, "********************")
+    # print('chi', chi)
+    # print("**********", k, "********************")
     dh_theta = fi_matrix.sensitivity_y(chi, J_h)
 
     fi_info_new = fi_matrix.fisher_info_matrix(dh_theta)
@@ -174,13 +190,16 @@ for k in range(500):  # 350 = 0.35s
     fi_info_new_scale = fi_info_new * scale_factor
     fi_info_scale = fi_info_previous_scale + fi_info_new_scale
     fi_info += fi_info_new
-    # print('fi', fi_info)
-    # fi_matrix.symmetrie_test(fi_info_scale)
+
 
     det_fi_scale = torch.det(fi_info_scale)
     log_det_scale = torch.log(det_fi_scale)
     det_fi = torch.det(fi_info)
-    log_det_scale = torch.log(det_fi)
+    log_det = torch.log(det_fi)
+    # det_fi_values.append(det_fi.item())
+    # log_dets.append(log_det.item())
+    det_fi_values.append(det_fi_scale.item())
+    log_dets.append(log_det_scale.item())
 
     step_reward_scale = log_det_scale - log_det_previous_scale
     total_reward_scale = total_reward_scale + step_reward_scale
@@ -189,9 +208,138 @@ for k in range(500):  # 350 = 0.35s
     fi_info_previous_scale = fi_info_scale * (scale_factor / scale_factor_previous)
     log_det_previous_scale = torch.slogdet(fi_info_previous_scale)[1]
     scale_factor_previous = scale_factor
-    # print('**************************************************************')
+    reward_values.append(step_reward_scale.item())
 
-# print('det scale is', torch.det(fi_info_scale).item())
-# print('log det scale is', torch.log(torch.det(fi_info_scale)).item())
-# print("total_reward_scale", total_reward_scale.item())
-print('fi', fi_info)
+    if k <= 4:
+        cond_values.append(np.nan)
+        # print(cond_values)
+    else:
+        # cond_values.append(np.linalg.cond(fi_info.detach().numpy()))
+        cond_values.append(np.linalg.cond(fi_info_scale.detach().numpy()))
+        
+
+print(fi_info_scale)
+#print the scaled FIM trajectory
+plt.figure(figsize=(14, 10))
+
+# Plot x0 vs Time (Input Signal)
+plt.subplot(3, 2, 1)
+plt.plot(time_values, u_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('Input Voltage (V)', fontsize=12)
+plt.title('(a) Input Signal', fontsize=14)
+plt.ylim(bottom=0) 
+plt.grid(True)
+
+# Plot x0 vs Time (State Variable)
+plt.subplot(3, 2, 3)
+plt.plot(time_values, x0_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('Motor position (rad)', fontsize=12)
+plt.title('(c) State Variable x0', fontsize=14)
+plt.grid(True)
+
+# Plot x1 vs Time (State Variable)
+plt.subplot(3, 2, 5)
+plt.plot(time_values, x1_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('Motor velocity (rad/s)', fontsize=12)
+plt.title('(e) State Variable x1', fontsize=14)
+plt.grid(True)
+
+# Plot det vs Time (Determinant of Fisher Information Matrix)
+plt.subplot(3, 2, 2)
+plt.plot(time_values, det_fi_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel(r'$|\bar{M}|$', fontsize=12)
+plt.title('(b) Determinant of normalized FIM', fontsize=14)
+plt.grid(True)
+
+# Plot log_det vs Time (Log Determinant of Fisher Information Matrix)
+plt.subplot(3, 2, 4)
+plt.plot(time_values, log_dets, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('log'+r'$|\bar{M}|$', fontsize=12)
+plt.title('(d) Logarithm of determinant of normalized FIM', fontsize=14)
+plt.grid(True)
+
+# Plot condition number vs Time (Step Rewards / Norm)
+plt.subplot(3, 2, 6)
+plt.plot(time_values, cond_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel(r'$\kappa(\bar{M})$', fontsize=12)
+plt.title('(f) Condition number of normalized FIM', fontsize=14)
+plt.grid(True)
+
+# Adjust layout for better spacing
+plt.tight_layout()
+
+# Show the final plot
+plt.show()
+
+
+
+
+
+
+
+
+
+##plt the origin FIM trajectory
+# plt.figure(figsize=(14, 10))
+
+# # Plot x0 vs Time (Input Signal)
+# plt.subplot(3, 2, 1)
+# plt.plot(time_values, u_values, color='b', linewidth=1.5)
+# plt.xlabel('Time (ms)', fontsize=12)
+# plt.ylabel('Input Voltage (V)', fontsize=12)
+# plt.title('(a) Input Signal', fontsize=14)
+# plt.ylim(bottom=0) 
+# plt.grid(True)
+
+# # Plot x0 vs Time (State Variable)
+# plt.subplot(3, 2, 3)
+# plt.plot(time_values, x0_values, color='b', linewidth=1.5)
+# plt.xlabel('Time (ms)', fontsize=12)
+# plt.ylabel('Motor position (rad)', fontsize=12)
+# plt.title('(c) State Variable x0', fontsize=14)
+# plt.grid(True)
+
+# # Plot x1 vs Time (State Variable)
+# plt.subplot(3, 2, 5)
+# plt.plot(time_values, x1_values, color='b', linewidth=1.5)
+# plt.xlabel('Time (ms)', fontsize=12)
+# plt.ylabel('Motor velocity (rad/s)', fontsize=12)
+# plt.title('(e) State Variable x1', fontsize=14)
+# plt.grid(True)
+
+# # Plot det vs Time (Determinant of Fisher Information Matrix)
+# plt.subplot(3, 2, 2)
+# plt.plot(time_values, det_fi_values, color='b', linewidth=1.5)
+# plt.xlabel('Time (ms)', fontsize=12)
+# plt.ylabel('|M|', fontsize=12)
+# plt.title('(b) Determinant of FIM', fontsize=14)
+# plt.grid(True)
+
+# # Plot log_det vs Time (Log Determinant of Fisher Information Matrix)
+# plt.subplot(3, 2, 4)
+# plt.plot(time_values, log_dets, color='b', linewidth=1.5)
+# plt.xlabel('Time (ms)', fontsize=12)
+# plt.ylabel('log |M|', fontsize=12)
+# plt.title('(d) Logarithm of determinant of FIM', fontsize=14)
+# plt.grid(True)
+
+# # Plot condition number vs Time (Step Rewards / Norm)
+# plt.subplot(3, 2, 6)
+# plt.plot(time_values, cond_values, color='b', linewidth=1.5)
+# plt.xlabel('Time (ms)', fontsize=12)
+# plt.ylabel('\u03BA(M)', fontsize=12)
+# plt.title('(f) Condition number of FIM', fontsize=14)
+# plt.grid(True)
+
+# # Adjust layout for better spacing
+# plt.tight_layout()
+
+# # Show the final plot
+# plt.show()
+

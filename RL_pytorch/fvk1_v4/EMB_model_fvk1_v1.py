@@ -35,7 +35,6 @@ class FI_matrix(object):
         dx1 = x2
         Tm = km * u
         Tl = self.gamma * k1 * torch.max(x1, torch.tensor(0.0, dtype=torch.float64))
-        # Tf = ((fc * torch.sign(x2) + fv * x2) / self.epsilon) * torch.min(torch.abs(x2), torch.tensor(self.epsilon, dtype=torch.float64)) # old wrong
         Tf = fc * torch.sign(x2) + fv * x2 # variant 1
         # Tf = fc * torch.tanh(1000 * x2) + fv * x2 # variant 2
         dx2 = (Tm - Tl - Tf) / self.J
@@ -57,8 +56,6 @@ class FI_matrix(object):
         y = h(x)
         output: J_h
         """
-        # dh_dx1 = torch.tensor([1.0, 0], dtype=torch.float64)
-        # dh_dx2 = torch.tensor([0, 1.0], dtype=torch.float64)
         dh_dx1 = torch.tensor([1/100, 0], dtype=torch.float64)
         dh_dx2 = torch.tensor([0, 1/500], dtype=torch.float64)
         return torch.stack([dh_dx1, dh_dx2])
@@ -88,7 +85,7 @@ class FI_matrix(object):
         jacobian_df_dtheta = torch.stack(jacobian_df_dtheta, dim=0)
 
         # jacobian_dtheta_dtheta_norm = torch.diag(self.fv)
-        # jacobian_df_dtheta_norm = torch.matmul(jacobian_df_dtheta.view(-1, 1), jacobian_dtheta_dtheta_norm)
+        # jacobian_df_dtheta_norm = torch.matmul(jacobian_df_dtheta.view(-1, 1), jacobian_dtheta_dtheta_norm))
 
         return jacobian_df_dx, jacobian_df_dtheta
 
