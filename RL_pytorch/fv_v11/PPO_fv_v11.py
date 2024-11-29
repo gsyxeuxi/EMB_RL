@@ -16,6 +16,7 @@ import EMB_env_fv_v11
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
+import json
 
 
 def parse_args():
@@ -144,35 +145,100 @@ def save_model(num):
 
     return model_path
 
-def draw(position_buffers, velocity_buffers):
-    fig, axes = plt.subplots(3, 2, figsize=(10, 15))
-    fig.suptitle('Position and Velocity vs Time for 6 Tests', fontsize=16)
+# def draw(position_buffers, velocity_buffers):
+#     fig, axes = plt.subplots(3, 2, figsize=(10, 15))
+#     fig.suptitle('Position and Velocity vs Time for 6 Tests', fontsize=16)
+#     axes = axes.flatten()
+#     for i, (position_buffer, velocity_buffer) in enumerate(zip(position_buffers, velocity_buffers)):
+#         ax1 = axes[i]
+#         ax2 = ax1.twinx()
+#         color = 'tab:blue'
+#         ax1.set_ylim(-20, 110)
+#         ax1.set_yticks(range(-20, 111, 10))
+#         ax2.set_yticks(range(-600, 601, 100))
+#         ax2.set_ylim(-600, 600)
+#         ax1.set_xlabel('Time / ms')
+#         ax1.set_ylabel('Position (Rad)', color=color)
+#         ax1.plot(position_buffer, color=color)
+#         ax1.tick_params(axis='y', labelcolor=color)
+#         ax1.axhline(y=100, color=color, linestyle='--', linewidth=1)
+#         ax1.axhline(y=-10, color=color, linestyle='--', linewidth=1)
+#         color = 'tab:red'
+#         ax2.set_ylabel('Velocity (Rad/s)', color=color)
+#         ax2.plot(velocity_buffer, color=color)
+#         ax2.tick_params(axis='y', labelcolor=color)
+#         ax2.axhline(y=500, color=color, linestyle='--', linewidth=1)
+#         ax2.axhline(y=-500, color=color, linestyle='--', linewidth=1)
+#         ax1.set_title(f'Experiment {i + 1}')
+#     fig.tight_layout(rect=[0, 0, 1, 0.96]) 
+#     if not os.path.exists('image'):
+#         os.makedirs('image')
+#     plt.savefig(os.path.join('image', 'position_velocity_6_tests.jpg'), dpi=300)
+#     plt.close()
+
+
+
+def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8))  # 创建两行子图
     axes = axes.flatten()
+    
+    # 定义颜色和线型
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:brown']
+    linestyle_solid = '-'  # 左侧 y 轴实线
+    linestyle_dashed = '--'  # 右侧 y 轴虚线
+
+    # 第一子图：Motor Position 和 Velocity
+    ax1 = axes[0]
+    ax2 = ax1.twinx()
     for i, (position_buffer, velocity_buffer) in enumerate(zip(position_buffers, velocity_buffers)):
-        ax1 = axes[i]
-        ax2 = ax1.twinx()
-        color = 'tab:blue'
-        ax1.set_ylim(-20, 110)
-        ax1.set_yticks(range(-20, 111, 10))
-        ax2.set_yticks(range(-600, 601, 100))
-        ax2.set_ylim(-600, 600)
-        ax1.set_xlabel('Time / ms')
-        ax1.set_ylabel('Position (Rad)', color=color)
-        ax1.plot(position_buffer, color=color)
-        ax1.tick_params(axis='y', labelcolor=color)
-        ax1.axhline(y=100, color=color, linestyle='--', linewidth=1)
-        ax1.axhline(y=-10, color=color, linestyle='--', linewidth=1)
-        color = 'tab:red'
-        ax2.set_ylabel('Velocity (Rad/s)', color=color)
-        ax2.plot(velocity_buffer, color=color)
-        ax2.tick_params(axis='y', labelcolor=color)
-        ax2.axhline(y=500, color=color, linestyle='--', linewidth=1)
-        ax2.axhline(y=-500, color=color, linestyle='--', linewidth=1)
-        ax1.set_title(f'Experiment {i + 1}')
-    fig.tight_layout(rect=[0, 0, 1, 0.96]) 
+        color = colors[i % len(colors)]
+        
+        ax1.plot(position_buffer, color=color, linestyle=linestyle_solid, label=f'Pos {i+1}')
+        ax2.plot(velocity_buffer, color=color, linestyle=linestyle_dashed, label=f'Vel {i+1}')
+    
+    ax1.set_ylim(-20, 110)
+    ax1.set_yticks(range(-20, 111, 10))
+    ax2.set_ylim(-600, 600)
+    ax2.set_yticks(range(-600, 601, 100))
+    ax1.set_xlabel('Time (ms)', fontsize=12)
+    ax1.set_ylabel('Motor Position (rad)', fontsize=12)
+    ax2.set_ylabel('Motor Velocity (rad/s)', fontsize=12)
+    ax1.axhline(y=100, color='gray', linestyle='--', linewidth=1)
+    ax1.axhline(y=-10, color='gray', linestyle='--', linewidth=1)
+    ax2.axhline(y=500, color='gray', linestyle='--', linewidth=1)
+    ax2.axhline(y=-500, color='gray', linestyle='--', linewidth=1)
+    ax1.grid(True)
+    
+    # 合并图例
+    lines_1, labels_1 = ax1.get_legend_handles_labels()
+    lines_2, labels_2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=5, fontsize=10)
+
+    # 第二子图：Input Voltage 和 Episodic Return
+    ax1 = axes[1]
+    ax2 = ax1.twinx()
+    for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
+        color = colors[i % len(colors)]
+        
+        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Volt {i+1}')
+        ax2.plot(reward_buffer, color=color, linestyle=linestyle_dashed, label=f'Reward {i+1}')
+    
+    ax1.set_ylim(-7, 7)
+    ax1.set_xlabel('Time (ms)', fontsize=12)
+    ax1.set_ylabel('Input Voltage (V)', fontsize=12)
+    ax2.set_ylabel('Step Reward', fontsize=12)
+    ax1.axhline(y=6, color='gray', linestyle='--', linewidth=1)
+    ax1.axhline(y=-6, color='gray', linestyle='--', linewidth=1)
+    ax1.grid(True)
+ 
+    lines_1, labels_1 = ax1.get_legend_handles_labels()
+    lines_2, labels_2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=5, fontsize=10)
+
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
     if not os.path.exists('image'):
         os.makedirs('image')
-    plt.savefig(os.path.join('image', 'position_velocity_6_tests.jpg'), dpi=300)
+    plt.savefig(os.path.join('image', 'position_velocity_optimized_with_return.svg'), format="svg")
     plt.close()
 
 def draw_action_reward(action_buffers, reward_buffers):
@@ -436,9 +502,10 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__1__20241016-train/PPO_fv_v11_244.pth"
+        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__4911__20241027-train-good/PPO_fv_v11_244.pth"
+        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241016-train/PPO_fv_v11_140.pth"
         epsilon = 1e-8
-        eval_episodes = 6
+        eval_episodes = 40
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')
@@ -473,6 +540,14 @@ if __name__ == "__main__":
         action_buffers = []
         reward_buffers = []
 
+        k = 0
+        epsiode = 0
+        reward1 = 0
+        reward2 = 0
+        reward3 = 0
+        rewards_data = []
+        json_file_path = "rewards_log.json"
+
         while len(episodic_returns) < eval_episodes:
             next_obs_norm_actor =  next_obs_norm[:,2:5]
             with torch.no_grad():
@@ -487,8 +562,27 @@ if __name__ == "__main__":
             reward_buffer.append(reward_test[0]) 
 
             next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
-   
+            if k<300:
+                reward1+=reward_test[0]
+            elif k<499:
+                reward2+=reward_test[0]
+            else: reward3 = reward_test[0]
+
+            k += 1
             if "final_info" in infos:
+                epsiode += 1
+                episode_data = {
+                    "episode": epsiode,
+                    "reward1": reward1,
+                    "reward2": reward2,
+                    "reward3": reward3
+                }
+                rewards_data.append(episode_data)
+                reward1=0
+                reward2=0
+                reward2=0
+                k=0
+
                 position_buffer.pop()
                 velocity_buffer.pop()
                 for obs in infos["final_observation"]:
@@ -522,8 +616,10 @@ if __name__ == "__main__":
         for idx, episodic_return in enumerate(episodic_returns):
             writer.add_scalar("eval/episodic_return", episodic_return, idx)
 
-        draw(position_buffers, velocity_buffers)
-        draw_action_reward(action_buffers, reward_buffers)
+        with open(json_file_path, mode='w') as file:
+            json.dump(rewards_data, file, indent=4)
+        # draw(position_buffers, velocity_buffers, action_buffers, reward_buffers)
+        # draw_action_reward(action_buffers, reward_buffers)
 
     envs.close()
     writer.close()

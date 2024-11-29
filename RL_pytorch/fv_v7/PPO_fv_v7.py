@@ -113,51 +113,142 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
+# def draw(position_buffers, velocity_buffers):
+#     fig, axes = plt.subplots(3, 2, figsize=(10, 15))
+#     fig.suptitle('Position and Velocity vs Time for 6 Tests', fontsize=16)
+#     axes = axes.flatten()
+#     for i, (position_buffer, velocity_buffer) in enumerate(zip(position_buffers, velocity_buffers)):
+#         ax1 = axes[i]
+#         ax2 = ax1.twinx()
+#         color = 'tab:blue'
+#         ax1.set_xlabel('Time / ms')
+#         ax1.set_ylabel('Position (Rad)', color=color)
+#         ax1.plot(position_buffer, color=color)
+#         ax1.tick_params(axis='y', labelcolor=color)
+#         color = 'tab:red'
+#         ax2.set_ylabel('Velocity (Rad/s)', color=color)
+#         ax2.plot(velocity_buffer, color=color)
+#         ax2.tick_params(axis='y', labelcolor=color)
+#         ax1.set_title(f'Experiment {i + 1}')
+#     fig.tight_layout(rect=[0, 0, 1, 0.96]) 
+#     if not os.path.exists('image'):
+#         os.makedirs('image')
+#     plt.savefig(os.path.join('image', 'position_velocity_6_tests.jpg'), dpi=300)
+#     plt.close()
+
+# def draw_action_reward(action_buffers, reward_buffers):
+#     fig, axes = plt.subplots(3, 2, figsize=(10, 15))
+#     fig.suptitle('Action and Reward vs Time for 6 Tests', fontsize=16)
+#     axes = axes.flatten()
+#     for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
+#         ax1 = axes[i]
+#         ax2 = ax1.twinx()
+#         color = 'tab:blue'
+#         ax1.set_xlabel('Time / ms')
+#         ax1.set_ylabel('Action (V)', color=color)
+#         ax1.plot(action_buffer, color=color)
+#         ax1.tick_params(axis='y', labelcolor=color)
+#         color = 'tab:red'
+#         ax2.set_ylabel('Total Reward', color=color)
+#         ax2.plot(reward_buffer, color=color)
+#         ax2.tick_params(axis='y', labelcolor=color)
+#         ax1.set_title(f'Experiment {i + 1}')
+#     fig.tight_layout(rect=[0, 0, 1, 0.96]) 
+#     if not os.path.exists('image'):
+#         os.makedirs('image')
+#     plt.savefig(os.path.join('image', 'action_reward_6_tests.jpg'), dpi=300)
+#     plt.close()
+
+
 def draw(position_buffers, velocity_buffers):
-    fig, axes = plt.subplots(3, 2, figsize=(10, 15))
-    fig.suptitle('Position and Velocity vs Time for 6 Tests', fontsize=16)
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8))
+    # fig.suptitle('Position and Velocity vs Time for 6 Tests', fontsize=16)
     axes = axes.flatten()
     for i, (position_buffer, velocity_buffer) in enumerate(zip(position_buffers, velocity_buffers)):
         ax1 = axes[i]
         ax2 = ax1.twinx()
         color = 'tab:blue'
-        ax1.set_xlabel('Time / ms')
-        ax1.set_ylabel('Position (Rad)', color=color)
-        ax1.plot(position_buffer, color=color)
-        ax1.tick_params(axis='y', labelcolor=color)
+        ax1.set_ylim(-20, 110)
+        ax1.set_yticks(range(-20, 111, 10))
+        ax2.set_yticks(range(-600, 601, 100))
+        ax2.set_ylim(-600, 600)
+        ax1.set_xlabel('Time (ms)', fontsize=12)
+        ax1.set_ylabel('Motor Position (rad)', fontsize=12)
+        ax1.plot(position_buffer, color=color, label='Motor Position')
+        ax1.tick_params(axis='y')
+        ax1.axhline(y=100, color=color, linestyle='--', linewidth=1)
+        ax1.axhline(y=-10, color=color, linestyle='--', linewidth=1)
+        ax1.grid(True)
+        # ax1.legend(loc='upper left')
+
         color = 'tab:red'
-        ax2.set_ylabel('Velocity (Rad/s)', color=color)
-        ax2.plot(velocity_buffer, color=color)
-        ax2.tick_params(axis='y', labelcolor=color)
-        ax1.set_title(f'Experiment {i + 1}')
+        ax2.set_ylabel('Motor Velocity (rad/s)', fontsize=12)
+        ax2.plot(velocity_buffer, color=color,label='Motor Velocity')
+        ax2.tick_params(axis='y')
+        ax2.axhline(y=500, color=color, linestyle='--', linewidth=1)
+        ax2.axhline(y=-500, color=color, linestyle='--', linewidth=1)
+        # ax2.legend(loc='upper right')
+        lines_1, labels_1 = ax1.get_legend_handles_labels()
+        lines_2, labels_2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='lower right', bbox_to_anchor=(1, 0.1))
+        # ax1.set_title(f'Experiment {i + 1}')
+
+    for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
+        ax1 = axes[i+1]
+        ax2 = ax1.twinx()
+        color = 'tab:blue'
+        ax1.set_ylim(-7, 7)
+        # ax2.set_ylim(-1e8, 1e8)
+        ax1.set_xlabel('Time (ms)', fontsize=12)
+        ax1.set_ylabel('Input Voltage (V)', fontsize=12)
+        ax1.plot(action_buffer, color=color, label='Input Voltage')
+        ax1.tick_params(axis='y')
+        ax1.axhline(y=6, color=color, linestyle='--', linewidth=1)
+        ax1.axhline(y=-6, color=color, linestyle='--', linewidth=1)
+        ax1.grid(True)
+        color = 'tab:red'
+        ax2.set_ylabel('Episodic Return', fontsize=12)
+        ax2.plot(reward_buffer, color=color, label='Episodic Return')
+        ax2.tick_params(axis='y')
+        lines_1, labels_1 = ax1.get_legend_handles_labels()
+        lines_2, labels_2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='lower right', bbox_to_anchor=(1, 0.1))
+        # ax1.set_title(f'Experiment {i + 1}')
+
     fig.tight_layout(rect=[0, 0, 1, 0.96]) 
     if not os.path.exists('image'):
         os.makedirs('image')
-    plt.savefig(os.path.join('image', 'position_velocity_6_tests.jpg'), dpi=300)
+    plt.savefig(os.path.join('image', 'position_velocity_single_para_fix.svg'), format="svg")
+    # plt.show()
     plt.close()
 
 def draw_action_reward(action_buffers, reward_buffers):
     fig, axes = plt.subplots(3, 2, figsize=(10, 15))
-    fig.suptitle('Action and Reward vs Time for 6 Tests', fontsize=16)
+    # fig.suptitle('Action and Reward vs Time for 6 Tests', fontsize=16)
     axes = axes.flatten()
     for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
         ax1 = axes[i]
         ax2 = ax1.twinx()
         color = 'tab:blue'
-        ax1.set_xlabel('Time / ms')
+        ax1.set_ylim(-7, 7)
+        # ax2.set_ylim(-1e8, 1e8)
+        ax1.set_xlabel('Time (ms)')
         ax1.set_ylabel('Action (V)', color=color)
         ax1.plot(action_buffer, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
+        ax1.axhline(y=6, color=color, linestyle='--', linewidth=1)
+        ax1.axhline(y=-6, color=color, linestyle='--', linewidth=1)
         color = 'tab:red'
-        ax2.set_ylabel('Total Reward', color=color)
+        ax2.set_ylabel('Episodic Return', color=color)
         ax2.plot(reward_buffer, color=color)
         ax2.tick_params(axis='y', labelcolor=color)
         ax1.set_title(f'Experiment {i + 1}')
     fig.tight_layout(rect=[0, 0, 1, 0.96]) 
     if not os.path.exists('image'):
         os.makedirs('image')
-    plt.savefig(os.path.join('image', 'action_reward_6_tests.jpg'), dpi=300)
+    plt.savefig(os.path.join('image', 'action_reward_single_para_fix.svg'), format="svg")
     plt.close()
+
 
 class Agent(nn.Module):
     def __init__(self, envs):
@@ -415,9 +506,9 @@ if __name__ == "__main__":
         }, model_path)
 
     if args.test_model:
-        model_path = f"runs/EMB-fv-v7__PPO_fv_v7__5__train/PPO_fv_v7.pth"
+        model_path = f"runs/EMB-fv-v6__PPO_fv_v6__1__posreward/PPO_fv_v7.pth"
         epsilon = 1e-8
-        eval_episodes = 40
+        eval_episodes = 1
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')
@@ -494,8 +585,8 @@ if __name__ == "__main__":
         for idx, episodic_return in enumerate(episodic_returns):
             writer.add_scalar("eval/episodic_return", episodic_return, idx)
 
-        # draw(position_buffers, velocity_buffers)
-        # draw_action_reward(action_buffers, reward_buffers)
+        draw(position_buffers, velocity_buffers)
+        draw_action_reward(action_buffers, reward_buffers)
 
     envs.close()
     writer.close()

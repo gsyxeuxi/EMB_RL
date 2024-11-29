@@ -438,9 +438,9 @@ if __name__ == "__main__":
         model_path = save_model(num_updates)
 
     if args.test_model:
-        model_path = f"runs/EMB-fvk1-v3__ppo_fvk1_v3__1__20241024-232749/PPO_fvk1_v3_122.pth"
+        model_path = f"runs/EMB-fvk1-v1__ppo_fvk1_v1__1__20241022-v2-train/PPO_fvk1_v1_244.pth"
         epsilon = 1e-8
-        eval_episodes = 6
+        eval_episodes = 1
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')
@@ -481,11 +481,11 @@ if __name__ == "__main__":
             with torch.no_grad():
                 actions = agent.actor_mean(torch.Tensor(next_obs_norm_actor).to(device)).detach()
 
-            # if step <= 300:
-            #     actions = torch.Tensor([[1.0]]) if (step // 20) % 2 == 0 else torch.Tensor([[-1.0]])
+            if step <= 300:
+                actions = torch.Tensor([[1.0]]) if (step // 20) % 2 == 0 else torch.Tensor([[-1.0]])
             # else:
             #     actions = torch.Tensor([[0.0]])
-            # step += 1
+            step += 1
 
             next_obs, reward_test, _, _, infos = env_test.step(actions.cpu().numpy())
             total_reward_test += reward_test[0]

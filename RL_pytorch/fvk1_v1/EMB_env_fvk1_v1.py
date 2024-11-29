@@ -33,7 +33,7 @@ class EMB_All_info_Env(gym.Env):
     def __init__(self) -> None:
         self.fi_matrix = FI_matrix()
         self._dt = 0.001
-        self.max_env_steps = 400 #500 by single parameter
+        self.max_env_steps = 300 #500 by single parameter
         self.count = 0 
         self.reward = None
         self.current = None # input u
@@ -225,10 +225,11 @@ class EMB_All_info_Env(gym.Env):
 
         # for test
         elif self.is_dangerous:
-            self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
+            # self.reward = 10000 * step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
+            self.reward = step_reward_scale.item() - 300 * (x0_new - self.dangerous_position) ** 2
         else:
             # self.reward = (100 * step_reward_scale.item()) ** 2 + 10 * u
-            self.reward = 10000 * step_reward_scale.item()
+            self.reward = step_reward_scale.item()
         # a, b, d = FIM_upper_triangle[:]
         # print(a, b, d)
         # self.reward = (a + d) / (a * d - b**2)

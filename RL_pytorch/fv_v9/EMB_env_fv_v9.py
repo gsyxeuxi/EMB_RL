@@ -162,25 +162,25 @@ class EMB_All_info_Env(gym.Env):
         if not self.is_safe:
             self.reward = -1e7 #4e4
 
-        # for test
-        elif self.is_dangerous:
-            self.reward = step_reward - 2000 * (x0_new - self.dangerous_position) ** 2
-        else:
-            self.reward = step_reward
-
-        ## variant 1
+        # # for test
         # elif self.is_dangerous:
-        #     if self.count > 300:
-        #         self.reward = (1 - (self.count/self.max_env_steps) ** 2) * step_reward - 200 * (x0_new - self.dangerous_position) ** 2 - \
-        #             0.1 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
-        #     else:
-        #         self.reward = step_reward - 200 * (x0_new - self.dangerous_position) ** 2 
+        #     self.reward = step_reward - 2000 * (x0_new - self.dangerous_position) ** 2
         # else:
-        #     if self.count > 300:
-        #         self.reward =  (1 - (self.count/self.max_env_steps) ** 2) * step_reward - \
-        #             0.1 * (self.count/self.max_env_steps) ** 2 * ((15 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
-        #     else:
-        #         self.reward = step_reward
+        #     self.reward = step_reward
+
+        # variant 1
+        elif self.is_dangerous:
+            if self.count > 300:
+                self.reward = (1 - (self.count/self.max_env_steps) ** 2) * step_reward - 200 * (x0_new - self.dangerous_position) ** 2 - \
+                    0.1 * (self.count/self.max_env_steps) ** 2 * ((10 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
+            else:
+                self.reward = step_reward - 200 * (x0_new - self.dangerous_position) ** 2 
+        else:
+            if self.count > 300:
+                self.reward =  (1 - (self.count/self.max_env_steps) ** 2) * step_reward - \
+                    0.1 * (self.count/self.max_env_steps) ** 2 * ((10 * x0_new) ** 2 + (1.0 * x1_new) ** 2)
+            else:
+                self.reward = step_reward
 
         ## variant 2
         # elif self.is_dangerous:

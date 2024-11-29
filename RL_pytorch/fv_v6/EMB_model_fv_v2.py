@@ -153,12 +153,23 @@ class FI_matrix(object):
 # log_det_previous_scale = torch.log(det_previous_scale)
 # total_reward_scale = log_det_previous_scale
 
+# x2_value = []
+# x2_value_dashed = []
+
 # # Start the simulation
-# for k in range(5):  # 350 = 0.35s
-#     u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
-#     u = -2
+# for k in range(300):  # 350 = 0.35s
+#     # u = torch.tensor(1.5 + 1.5 * torch.math.sin(2*pi*k/100 - pi/2), dtype=torch.float64)
+#     u = 6
 #     dx = fi_matrix.f(x, u, theta)
 #     x = x + det_T * dx
+#     # x2_value.append(x[1].item())
+#     if k<200:
+#         x2_value_dashed.append(500)
+#         x2_value.append(500)
+#     else:
+#         x2_value_dashed.append(0)
+#         x2_value.append(-500)
+#     # x2_value.append(500)
 #     J_f, df_theta = fi_matrix.jacobian(x, u, theta)
 #     J_h = fi_matrix.jacobian_h(x)
 #     chi = fi_matrix.sensitivity_x(J_f, df_theta, chi)
@@ -179,6 +190,7 @@ class FI_matrix(object):
 #     log_det_scale = torch.log(det_fi)
 
 #     step_reward_scale = log_det_scale - log_det_previous_scale
+#     # print(step_reward_scale)
 #     total_reward_scale = total_reward_scale + step_reward_scale
 
 #     scale_factor = (det_init / det_fi_scale).pow(1 / 4)
@@ -191,3 +203,99 @@ class FI_matrix(object):
 # # print('log det scale is', torch.log(torch.det(fi_info_scale)).item())
 # # print("total_reward_scale", total_reward_scale.item())
 # print('fi', fi_info)
+
+
+# # Parameters of the mass-spring-damper system
+# m = 4.624e-6  # Mass (kg)
+# k = 23.04 * 1.889e-5  # Spring constant (N/m)
+# c = 2.16e-5  # Damping coefficient (Ns/m)
+# F_max = 6 * c  # Maximum constant input force (N)
+
+# # Time settings
+# t_end = 0.301  # Simulation time in seconds
+# dt = 1e-3  # Time step
+# t = np.arange(0, t_end, dt)  # Time vector
+
+# # Initial conditions
+# x0 = 0.0  # Initial displacement (m)
+# v0 = 0.0  # Initial velocity (m/s)
+# state = np.array([x0, v0])  # Initial state: [displacement, velocity]
+# state_dashed = np.array([x0, v0])
+# # System matrices
+# A = np.array([[0, 1], [-k / m, -c / m]])  # System matrix
+# B = np.array([[0], [1 / m]])  # Input matrix
+
+# # Preallocate arrays for results
+# displacement = [0.0]
+# velocity = [0.0]
+# FIM = [0.0]
+
+# displacement_dashed = [0.0]
+# velocity_dashed = [0.0]
+# FIM_dashed = [0.0]
+# # Simulation loop
+# for x2 in x2_value:
+#     dx = A @ state + B.flatten() * x2 * c  # Derivative of the state
+#     state = state + dx * dt
+#     displacement.append(state[0])
+#     velocity.append(state[1])
+#     FIM.append(100*state[0]**2 + state[1]**2/250000)
+
+# for x2 in x2_value_dashed:
+#     dx_dashed = A @ state_dashed + B.flatten() * x2 * c  # Derivative of the state
+#     state_dashed = state_dashed + dx_dashed * dt
+#     displacement_dashed.append(state_dashed[0])
+#     velocity_dashed.append(state_dashed[1])
+#     FIM_dashed.append(100*state_dashed[0]**2 + state_dashed[1]**2/250000)
+    
+
+# # Convert results to numpy arrays
+# displacement = np.array(displacement)
+# velocity = np.array(velocity)
+# x2_value.append(500)
+# x2_value_dashed.append(0)
+# plt.figure(figsize=(10, 14))  # 增加图片长度，减少宽度
+
+# plt.subplot(4, 1, 1)
+# plt.plot(t, x2_value, color="blue", linewidth=1.5, label="Input 1")
+# plt.plot(t, x2_value_dashed, linestyle="--", color="blue", linewidth=1.5, label="Input 2")
+# plt.xlabel("Time (s)", fontsize=12)
+# plt.ylabel("Motor Velocity (rad/s)", fontsize=12)
+# plt.title("(a) System Input", fontsize=14)
+# plt.grid(alpha=0.6)
+# plt.legend(loc="upper right", fontsize=10)
+
+# # 图2：位移灵敏度
+# plt.subplot(4, 1, 2)
+# plt.plot(t, displacement, color="green", linewidth=1.5, label="Input 1")
+# plt.plot(t, displacement_dashed, linestyle="--", color="green", linewidth=1.5, label="Input 2")
+# plt.xlabel("Time (s)", fontsize=12)
+# plt.ylabel("State Variable a", fontsize=12)
+# plt.title("(b) Sensitivity of the Motor Position to the Viscous Friction", fontsize=14)
+# plt.grid(alpha=0.6)
+# plt.legend(loc="upper left", fontsize=10)
+
+# # 图3：速度灵敏度
+# plt.subplot(4, 1, 3)
+# plt.plot(t, velocity, label="Input 1", color="red", linewidth=1.5)
+# plt.plot(t, velocity_dashed, linestyle="--", color="red", linewidth=1.5, label="Input 2")
+# plt.xlabel("Time (s)", fontsize=12)
+# plt.ylabel("State Variable b", fontsize=12)
+# plt.title("(c) Sensitivity of the Motor Velocity to the Viscous Friction", fontsize=14)
+# plt.grid(alpha=0.6)
+# plt.legend(loc="upper right", fontsize=10)
+
+# # 图4：FIM递增
+# plt.subplot(4, 1, 4)
+# plt.plot(t, FIM, label="Input 1", color="purple", linewidth=1.5)
+# plt.plot(t, FIM_dashed, linestyle="--", color="purple", linewidth=1.5, label="Input 2")
+# plt.xlabel("Time (s)", fontsize=12)
+# plt.ylabel(r"$FIM_k$", fontsize=12)
+# plt.title("(d) Increment of Fisher Information Matrix", fontsize=14)
+# plt.grid(alpha=0.6)
+# plt.legend(loc="upper left", fontsize=10)
+# # 调整布局
+# # plt.tight_layout(h_pad=2.0)
+# plt.tight_layout()
+# plt.savefig("plot.svg", format="svg")
+

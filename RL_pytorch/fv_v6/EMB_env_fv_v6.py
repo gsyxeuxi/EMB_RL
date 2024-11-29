@@ -24,7 +24,7 @@ class EMB_All_info_Env(gym.Env):
     def __init__(self) -> None:
         self.fi_matrix = FI_matrix()
         self._dt = 0.001
-        self.max_env_steps = 500
+        self.max_env_steps = 300
         self.count = 0 
         self.reward = None
         self.current = None # input u
@@ -83,12 +83,12 @@ class EMB_All_info_Env(gym.Env):
         self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64) #add fv
         self.obs_state = np.array([0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
 
-        # if sample the fv
-        self.state[3] = random.uniform(self.fv_range_low, self.fv_range_high)
+        # # if sample the fv
+        # self.state[3] = random.uniform(self.fv_range_low, self.fv_range_high)
         
-        # # if the fv increase continiues
-        # self.state[3] = self.fv_range_low + self.reset_num * 1e-6
-        # self.reset_num += 1
+        # if the fv increase continiues
+        self.state[3] = self.fv_range_low + self.reset_num * 1e-6
+        self.reset_num += 1
 
         self.obs_state[3] = self.state[3]
         

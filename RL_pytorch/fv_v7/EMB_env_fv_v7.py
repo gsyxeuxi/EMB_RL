@@ -43,7 +43,7 @@ class EMB_All_info_Env(gym.Env):
         self.vel_std = 1.0
         # *************************************************** Define the Observation Space ***************************************************
         """
-        An 13-Dim Space: [motor position theta, time setp index k, fv, FIM element]
+        An 5-Dim Space: [motor position theta, time setp index k, fv, FIM element]
         """
         high = np.array([100, 500, 400, 5e-5, 1e10], dtype=np.float64)
         self.observation_space = gym.spaces.Box(low=-high, high=high, shape=(5,), dtype=np.float64)   
@@ -82,12 +82,12 @@ class EMB_All_info_Env(gym.Env):
         self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64) #add fv
         self.obs_state = np.array([0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
 
-        # # if sample the fv
-        # self.state[3] = 2.16e-5
+        # if sample the fv
+        self.state[3] = 2.16e-5
         
-        # if the fv increase continiues
-        self.state[3] = self.fv_range_low + self.reset_num * 1e-6
-        self.reset_num += 1
+        # # if the fv increase continiues
+        # self.state[3] = self.fv_range_low + self.reset_num * 1e-6
+        # self.reset_num += 1
 
         self.obs_state[3] = self.state[3]
         

@@ -1,0 +1,502 @@
+[
+   {
+      "episode": 1,
+      "reward": 26971568.0,
+      "terminated": 0
+   },
+   {
+      "episode": 2,
+      "reward": 19741792.0,
+      "terminated": 0
+   },
+   {
+      "episode": 3,
+      "reward": 26637760.0,
+      "terminated": 0
+   },
+   {
+      "episode": 4,
+      "reward": 16042560.0,
+      "terminated": 0
+   },
+   {
+      "episode": 5,
+      "reward": -371340.0,
+      "terminated": 1
+   },
+   {
+      "episode": 6,
+      "reward": 28759456.0,
+      "terminated": 0
+   },
+   {
+      "episode": 7,
+      "reward": -925586.0,
+      "terminated": 1
+   },
+   {
+      "episode": 8,
+      "reward": -796312.0,
+      "terminated": 1
+   },
+   {
+      "episode": 9,
+      "reward": -819423.0,
+      "terminated": 1
+   },
+   {
+      "episode": 10,
+      "reward": -438500.0,
+      "terminated": 1
+   },
+   {
+      "episode": 11,
+      "reward": -869936.0,
+      "terminated": 1
+   },
+   {
+      "episode": 12,
+      "reward": 28492464.0,
+      "terminated": 0
+   },
+   {
+      "episode": 13,
+      "reward": 307080.0,
+      "terminated": 1
+   },
+   {
+      "episode": 14,
+      "reward": 18612080.0,
+      "terminated": 0
+   },
+   {
+      "episode": 15,
+      "reward": 26166048.0,
+      "terminated": 0
+   },
+   {
+      "episode": 16,
+      "reward": 21800960.0,
+      "terminated": 0
+   },
+   {
+      "episode": 17,
+      "reward": 16935024.0,
+      "terminated": 0
+   },
+   {
+      "episode": 18,
+      "reward": -722794.0,
+      "terminated": 1
+   },
+   {
+      "episode": 19,
+      "reward": 27129424.0,
+      "terminated": 0
+   },
+   {
+      "episode": 20,
+      "reward": 14951648.0,
+      "terminated": 0
+   },
+   {
+      "episode": 21,
+      "reward": 29078448.0,
+      "terminated": 0
+   },
+   {
+      "episode": 22,
+      "reward": 21354544.0,
+      "terminated": 0
+   },
+   {
+      "episode": 23,
+      "reward": -372604.0,
+      "terminated": 1
+   },
+   {
+      "episode": 24,
+      "reward": 24241680.0,
+      "terminated": 0
+   },
+   {
+      "episode": 25,
+      "reward": 21287680.0,
+      "terminated": 0
+   },
+   {
+      "episode": 26,
+      "reward": 8839664.0,
+      "terminated": 1
+   },
+   {
+      "episode": 27,
+      "reward": 731520.0,
+      "terminated": 1
+   },
+   {
+      "episode": 28,
+      "reward": 22126368.0,
+      "terminated": 0
+   },
+   {
+      "episode": 29,
+      "reward": -137440.0,
+      "terminated": 1
+   },
+   {
+      "episode": 30,
+      "reward": 22029584.0,
+      "terminated": 0
+   },
+   {
+      "episode": 31,
+      "reward": -529397.0,
+      "terminated": 1
+   },
+   {
+      "episode": 32,
+      "reward": 26847376.0,
+      "terminated": 0
+   },
+   {
+      "episode": 33,
+      "reward": -762808.0,
+      "terminated": 1
+   },
+   {
+      "episode": 34,
+      "reward": -823404.0,
+      "terminated": 1
+   },
+   {
+      "episode": 35,
+      "reward": 458352.0,
+      "terminated": 1
+   },
+   {
+      "episode": 36,
+      "reward": -630330.0,
+      "terminated": 1
+   },
+   {
+      "episode": 37,
+      "reward": -488988.0,
+      "terminated": 1
+   },
+   {
+      "episode": 38,
+      "reward": -999446.796875,
+      "terminated": 1
+   },
+   {
+      "episode": 39,
+      "reward": -243664.0,
+      "terminated": 1
+   },
+   {
+      "episode": 40,
+      "reward": 473920.0,
+      "terminated": 1
+   },
+   {
+      "episode": 41,
+      "reward": -29528.0,
+      "terminated": 1
+   },
+   {
+      "episode": 42,
+      "reward": 388840.0,
+      "terminated": 1
+   },
+   {
+      "episode": 43,
+      "reward": 23658272.0,
+      "terminated": 0
+   },
+   {
+      "episode": 44,
+      "reward": 1224080.0,
+      "terminated": 1
+   },
+   {
+      "episode": 45,
+      "reward": -853750.0,
+      "terminated": 1
+   },
+   {
+      "episode": 46,
+      "reward": 20723360.0,
+      "terminated": 0
+   },
+   {
+      "episode": 47,
+      "reward": 21244976.0,
+      "terminated": 0
+   },
+   {
+      "episode": 48,
+      "reward": 797376.0,
+      "terminated": 1
+   },
+   {
+      "episode": 49,
+      "reward": -626380.0,
+      "terminated": 1
+   },
+   {
+      "episode": 50,
+      "reward": 371496.0,
+      "terminated": 1
+   },
+   {
+      "episode": 51,
+      "reward": -438137.0,
+      "terminated": 1
+   },
+   {
+      "episode": 52,
+      "reward": 25047424.0,
+      "terminated": 0
+   },
+   {
+      "episode": 53,
+      "reward": 19619648.0,
+      "terminated": 0
+   },
+   {
+      "episode": 54,
+      "reward": 24849584.0,
+      "terminated": 0
+   },
+   {
+      "episode": 55,
+      "reward": 1024.0,
+      "terminated": 1
+   },
+   {
+      "episode": 56,
+      "reward": 29972832.0,
+      "terminated": 0
+   },
+   {
+      "episode": 57,
+      "reward": 27504816.0,
+      "terminated": 0
+   },
+   {
+      "episode": 58,
+      "reward": 25416368.0,
+      "terminated": 0
+   },
+   {
+      "episode": 59,
+      "reward": -282272.0,
+      "terminated": 1
+   },
+   {
+      "episode": 60,
+      "reward": -536688.0,
+      "terminated": 1
+   },
+   {
+      "episode": 61,
+      "reward": 452208.0,
+      "terminated": 1
+   },
+   {
+      "episode": 62,
+      "reward": -471812.0,
+      "terminated": 1
+   },
+   {
+      "episode": 63,
+      "reward": 26149424.0,
+      "terminated": 0
+   },
+   {
+      "episode": 64,
+      "reward": 118640.0,
+      "terminated": 1
+   },
+   {
+      "episode": 65,
+      "reward": -576214.0,
+      "terminated": 1
+   },
+   {
+      "episode": 66,
+      "reward": -916742.0,
+      "terminated": 1
+   },
+   {
+      "episode": 67,
+      "reward": -898492.0,
+      "terminated": 1
+   },
+   {
+      "episode": 68,
+      "reward": -460480.0,
+      "terminated": 1
+   },
+   {
+      "episode": 69,
+      "reward": 29284096.0,
+      "terminated": 0
+   },
+   {
+      "episode": 70,
+      "reward": -405784.0,
+      "terminated": 1
+   },
+   {
+      "episode": 71,
+      "reward": 30289232.0,
+      "terminated": 0
+   },
+   {
+      "episode": 72,
+      "reward": -805287.0,
+      "terminated": 1
+   },
+   {
+      "episode": 73,
+      "reward": 31814864.0,
+      "terminated": 0
+   },
+   {
+      "episode": 74,
+      "reward": 27697808.0,
+      "terminated": 0
+   },
+   {
+      "episode": 75,
+      "reward": 171704.0,
+      "terminated": 1
+   },
+   {
+      "episode": 76,
+      "reward": -889906.0,
+      "terminated": 1
+   },
+   {
+      "episode": 77,
+      "reward": 21329184.0,
+      "terminated": 0
+   },
+   {
+      "episode": 78,
+      "reward": -707422.0,
+      "terminated": 1
+   },
+   {
+      "episode": 79,
+      "reward": 28920336.0,
+      "terminated": 0
+   },
+   {
+      "episode": 80,
+      "reward": 20101536.0,
+      "terminated": 0
+   },
+   {
+      "episode": 81,
+      "reward": -829461.0,
+      "terminated": 1
+   },
+   {
+      "episode": 82,
+      "reward": -483776.0,
+      "terminated": 1
+   },
+   {
+      "episode": 83,
+      "reward": 15823392.0,
+      "terminated": 0
+   },
+   {
+      "episode": 84,
+      "reward": -358098.0,
+      "terminated": 1
+   },
+   {
+      "episode": 85,
+      "reward": 19842368.0,
+      "terminated": 0
+   },
+   {
+      "episode": 86,
+      "reward": -348208.0,
+      "terminated": 1
+   },
+   {
+      "episode": 87,
+      "reward": 30452768.0,
+      "terminated": 0
+   },
+   {
+      "episode": 88,
+      "reward": 1200656.0,
+      "terminated": 1
+   },
+   {
+      "episode": 89,
+      "reward": 23507328.0,
+      "terminated": 0
+   },
+   {
+      "episode": 90,
+      "reward": -684979.0,
+      "terminated": 1
+   },
+   {
+      "episode": 91,
+      "reward": -838441.0,
+      "terminated": 1
+   },
+   {
+      "episode": 92,
+      "reward": 20055328.0,
+      "terminated": 0
+   },
+   {
+      "episode": 93,
+      "reward": 898032.0,
+      "terminated": 1
+   },
+   {
+      "episode": 94,
+      "reward": 23191504.0,
+      "terminated": 0
+   },
+   {
+      "episode": 95,
+      "reward": -748279.0,
+      "terminated": 1
+   },
+   {
+      "episode": 96,
+      "reward": 26886576.0,
+      "terminated": 0
+   },
+   {
+      "episode": 97,
+      "reward": -854866.0,
+      "terminated": 1
+   },
+   {
+      "episode": 98,
+      "reward": 23085280.0,
+      "terminated": 0
+   },
+   {
+      "episode": 99,
+      "reward": 108120.0,
+      "terminated": 1
+   },
+   {
+      "episode": 100,
+      "reward": 2117888.0,
+      "terminated": 1
+   }
+]

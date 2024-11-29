@@ -96,11 +96,11 @@ class EMB_All_info_Env(gym.Env):
         self.state[1] = self.state[3] = random.uniform(-self.vel_reset_range_high, self.vel_reset_range_high)
 
         # if sample the fv
-        self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
+        # self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
         
-        # # if the fv increase continiues
-        # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
-        # self.reset_num += 1
+        # if the fv increase continiues
+        self.state[5] = self.fv_range_low + self.reset_num * 1e-6
+        self.reset_num += 1
  
         self.count = 0
         observation = self._get_obs()
