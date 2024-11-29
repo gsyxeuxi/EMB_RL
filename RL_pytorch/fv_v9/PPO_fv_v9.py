@@ -113,47 +113,15 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
-# def draw(position_buffers, velocity_buffers):
-#     fig, axes = plt.subplots(3, 2, figsize=(10, 15))
-#     fig.suptitle('Position and Velocity vs Time for 6 Tests', fontsize=16)
-#     axes = axes.flatten()
-#     for i, (position_buffer, velocity_buffer) in enumerate(zip(position_buffers, velocity_buffers)):
-#         ax1 = axes[i]
-#         ax2 = ax1.twinx()
-#         color = 'tab:blue'
-#         ax1.set_ylim(-20, 110)
-#         ax1.set_yticks(range(-20, 111, 10))
-#         ax2.set_yticks(range(-600, 601, 100))
-#         ax2.set_ylim(-600, 600)
-#         ax1.set_xlabel('Time / ms')
-#         ax1.set_ylabel('Position (Rad)', color=color)
-#         ax1.plot(position_buffer, color=color)
-#         ax1.tick_params(axis='y', labelcolor=color)
-#         ax1.axhline(y=100, color=color, linestyle='--', linewidth=1)
-#         ax1.axhline(y=-10, color=color, linestyle='--', linewidth=1)
-#         color = 'tab:red'
-#         ax2.set_ylabel('Velocity (Rad/s)', color=color)
-#         ax2.plot(velocity_buffer, color=color)
-#         ax2.tick_params(axis='y', labelcolor=color)
-#         ax2.axhline(y=500, color=color, linestyle='--', linewidth=1)
-#         ax2.axhline(y=-500, color=color, linestyle='--', linewidth=1)
-#         ax1.set_title(f'Experiment {i + 1}')
-#     fig.tight_layout(rect=[0, 0, 1, 0.96]) 
-#     if not os.path.exists('image'):
-#         os.makedirs('image')
-#     plt.savefig(os.path.join('image', 'position_velocity_6_tests.jpg'), dpi=300)
-#     plt.close()
 
 def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
-    fig, axes = plt.subplots(2, 1, figsize=(10, 8))  # 创建两行子图
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8))  
     axes = axes.flatten()
     
-    # 定义颜色和线型
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:brown']
-    linestyle_solid = '-'  # 左侧 y 轴实线
-    linestyle_dashed = '--'  # 右侧 y 轴虚线
+    linestyle_solid = '-' 
+    linestyle_dashed = '--'  
 
-    # 第一子图：Motor Position 和 Velocity
     ax1 = axes[0]
     ax2 = ax1.twinx()
     for i, (position_buffer, velocity_buffer) in enumerate(zip(position_buffers, velocity_buffers)):
@@ -175,12 +143,10 @@ def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
     ax2.axhline(y=-500, color='gray', linestyle='--', linewidth=1)
     ax1.grid(True)
     
-    # 合并图例
     lines_1, labels_1 = ax1.get_legend_handles_labels()
     lines_2, labels_2 = ax2.get_legend_handles_labels()
     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=5, fontsize=10)
 
-    # 第二子图：Input Voltage 和 Episodic Return
     ax1 = axes[1]
     ax2 = ax1.twinx()
     for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):

@@ -209,15 +209,13 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 #     plt.close()
 
 def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
-    fig, axes = plt.subplots(2, 1, figsize=(10, 8))  # 创建两行子图
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8)) 
     axes = axes.flatten()
-    
-    # 定义颜色和线型
-    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:brown']
-    linestyle_solid = '-'  # 左侧 y 轴实线
-    linestyle_dashed = '--'  # 右侧 y 轴虚线
 
-    # 第一子图：Motor Position 和 Velocity
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:brown']
+    linestyle_solid = '-'  
+    linestyle_dashed = '--'  
+
     ax1 = axes[0]
     ax2 = ax1.twinx()
     for i, (position_buffer, velocity_buffer) in enumerate(zip(position_buffers, velocity_buffers)):
@@ -239,43 +237,35 @@ def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
     ax2.axhline(y=-500, color='gray', linestyle='--', linewidth=1)
     ax1.grid(True)
     
-    # 合并图例
     lines_1, labels_1 = ax1.get_legend_handles_labels()
     lines_2, labels_2 = ax2.get_legend_handles_labels()
     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=5, fontsize=10)
 
-    # 第二子图：Input Voltage 和 Episodic Return
     ax1 = axes[1]
     ax2 = ax1.twinx()
     for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
         color = colors[i % len(colors)]
         
-        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Volt {i+1}')
+        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Current {i+1}')
         ax2.plot(reward_buffer, color=color, linestyle=linestyle_dashed, label=f'Return {i+1}')
     
     ax1.set_ylim(-7, 7)
     ax1.set_xlabel('Time (ms)', fontsize=12)
-    ax1.set_ylabel('Input Voltage (V)', fontsize=12)
+    ax1.set_ylabel('Input Current (A)', fontsize=12)
     ax2.set_ylabel('Episodic Return', fontsize=12)
     ax1.axhline(y=6, color='gray', linestyle='--', linewidth=1)
     ax1.axhline(y=-6, color='gray', linestyle='--', linewidth=1)
     ax1.grid(True)
-    
-    # 合并图例
+
     lines_1, labels_1 = ax1.get_legend_handles_labels()
     lines_2, labels_2 = ax2.get_legend_handles_labels()
     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=5, fontsize=10)
 
-    # 全局布局
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     if not os.path.exists('image'):
         os.makedirs('image')
     plt.savefig(os.path.join('image', 'position_velocity_optimized_with_return.svg'), format="svg")
     plt.close()
-
-# 示例调用：
-# draw_optimized(position_buffers, velocity_buffers, action_buffers, reward_buffers)
-
 
 
 
@@ -563,9 +553,9 @@ if __name__ == "__main__":
         }, model_path)
 
     if args.test_model:
-        model_path = f"runs/EMB-fv-v7__PPO_fv_v7__1__train/PPO_fv_v7.pth"
+        model_path = f"runs/EMB-fv-v6__PPO_fv_v6__1__posreward_for_thesis/PPO_fv_v6.pth"
         epsilon = 1e-8
-        eval_episodes = 40
+        eval_episodes = 5
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')
@@ -643,7 +633,7 @@ if __name__ == "__main__":
             writer.add_scalar("eval/episodic_return", episodic_return, idx)
 
         # draw(position_buffers, velocity_buffers)
-        # draw(position_buffers, velocity_buffers, action_buffers, reward_buffers)
+        draw(position_buffers, velocity_buffers, action_buffers, reward_buffers)
         # draw_action_reward(action_buffers, reward_buffers)
 
     envs.close()

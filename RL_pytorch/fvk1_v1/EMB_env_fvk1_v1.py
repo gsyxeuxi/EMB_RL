@@ -11,7 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 '''
-EMB_env_fv_v11:
+EMB_env_fvk1_v1:
 the right model we want
 for actor: measured x1 and x2
 for critic: real x1 and x2 and k and fv and FIM
