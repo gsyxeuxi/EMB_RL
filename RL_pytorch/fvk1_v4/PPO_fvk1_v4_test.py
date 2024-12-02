@@ -218,12 +218,12 @@ def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
     for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
         color = colors[i % len(colors)]
         
-        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Volt {i+1}')
+        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Current {i+1}')
         ax2.plot(reward_buffer, color=color, linestyle=linestyle_dashed, label=f'Reward {i+1}')
     
     ax1.set_ylim(-7, 7)
     ax1.set_xlabel('Time (ms)', fontsize=12)
-    ax1.set_ylabel('Input Voltage (V)', fontsize=12)
+    ax1.set_ylabel('Input Current (A)', fontsize=12)
     ax2.set_ylabel('Step Reward', fontsize=12)
     ax1.axhline(y=6, color='gray', linestyle='--', linewidth=1)
     ax1.axhline(y=-6, color='gray', linestyle='--', linewidth=1)
@@ -504,7 +504,7 @@ if __name__ == "__main__":
         # model_path = f"runs/EMB-fvk1-v4__ppo_fvk1_v4__1492__20241111-002131/ppo_fvk1_v4_610.pth"
         model_path = f"runs/EMB-fvk1-v4__ppo_fvk1_v4__1492__20241101-5e-4-cp0.25-5m-backreward-dangerous85/ppo_fvk1_v4_610.pth"
         epsilon = 1e-8
-        eval_episodes = 100
+        eval_episodes = 5
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')
@@ -619,7 +619,7 @@ if __name__ == "__main__":
 
         with open(json_file_path, mode='w') as file:
             json.dump(rewards_data, file, indent=3)
-        # draw(position_buffers, velocity_buffers, action_buffers, reward_buffers)
+        draw(position_buffers, velocity_buffers, action_buffers, reward_buffers)
         # draw_action_reward(action_buffers, reward_buffers)
 
     envs.close()

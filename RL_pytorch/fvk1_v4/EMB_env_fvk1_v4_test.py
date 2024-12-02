@@ -101,9 +101,17 @@ class EMB_All_info_Env(gym.Env):
         self.state[6] = random.uniform(self.k1_range_low, self.k1_range_high)
 
         # # if the fv increase continiues
-        # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
+        # self.state[5] = self.fv_range_low + 2 * 1e-6
+        # self.state[6] = self.k1_range_high - self.reset_num * 5
         # self.reset_num += 1
- 
+
+        # # for gridded test
+        # self.state[5] = self.fv_range_low + self.reset_num * 8e-6
+        # self.state[6] = self.k1_range_high - self.reset_num * 5
+        # self.reset_num += 1
+        print(self.state[5])
+        print(self.state[6])
+
         self.count = 0
         observation = self._get_obs()
         self.chi = torch.zeros((2, 2), dtype=torch.float64)

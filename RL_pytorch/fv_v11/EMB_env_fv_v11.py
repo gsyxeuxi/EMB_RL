@@ -98,8 +98,12 @@ class EMB_All_info_Env(gym.Env):
         # if sample the fv
         # self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
         
-        # if the fv increase continiues
-        self.state[5] = self.fv_range_low + self.reset_num * 1e-6
+        # # if the fv increase continiues
+        # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
+        # self.reset_num += 1
+
+        # if the fv in gridded value
+        self.state[5] = self.fv_range_low + self.reset_num * 8e-6
         self.reset_num += 1
  
         self.count = 0

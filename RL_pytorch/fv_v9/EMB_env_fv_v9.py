@@ -84,12 +84,16 @@ class EMB_All_info_Env(gym.Env):
         super().reset(seed=seed)
         self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64) #add fv
 
-        # if sample the fv
-        self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
+        # # if sample the fv
+        # self.state[5] = random.uniform(self.fv_range_low, self.fv_range_high)
         
         # # if the fv increase continiues
         # self.state[5] = self.fv_range_low + self.reset_num * 1e-6
         # self.reset_num += 1
+
+        # if the fv in gridded value
+        self.state[5] = self.fv_range_low + self.reset_num * 8e-6
+        self.reset_num += 1
  
         self.count = 0
         observation = self._get_obs()

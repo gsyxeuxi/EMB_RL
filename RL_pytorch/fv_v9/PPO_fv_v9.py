@@ -152,12 +152,12 @@ def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
     for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
         color = colors[i % len(colors)]
         
-        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Volt {i+1}')
+        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Current {i+1}')
         ax2.plot(reward_buffer, color=color, linestyle=linestyle_dashed, label=f'Reward {i+1}')
     
     ax1.set_ylim(-7, 7)
     ax1.set_xlabel('Time (ms)', fontsize=12)
-    ax1.set_ylabel('Input Voltage (V)', fontsize=12)
+    ax1.set_ylabel('Input Current (A)', fontsize=12)
     ax2.set_ylabel('Step Reward', fontsize=12)
     ax1.axhline(y=6, color='gray', linestyle='--', linewidth=1)
     ax1.axhline(y=-6, color='gray', linestyle='--', linewidth=1)

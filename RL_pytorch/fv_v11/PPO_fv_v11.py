@@ -220,13 +220,14 @@ def draw(position_buffers, velocity_buffers, action_buffers, reward_buffers):
     for i, (action_buffer, reward_buffer) in enumerate(zip(action_buffers, reward_buffers)):
         color = colors[i % len(colors)]
         
-        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Volt {i+1}')
-        ax2.plot(reward_buffer, color=color, linestyle=linestyle_dashed, label=f'Reward {i+1}')
+        ax1.plot(action_buffer, color=color, linestyle=linestyle_solid, label=f'Current {i+1}')
+        ax2.plot(reward_buffer, color=color, linestyle=linestyle_dashed, label=f'Return {i+1}')
     
     ax1.set_ylim(-7, 7)
     ax1.set_xlabel('Time (ms)', fontsize=12)
-    ax1.set_ylabel('Input Voltage (V)', fontsize=12)
-    ax2.set_ylabel('Step Reward', fontsize=12)
+    ax1.set_ylabel('Input Current (A)', fontsize=12)
+    # ax2.set_ylabel('Step Reward', fontsize=12)
+    ax2.set_ylabel('Epsiodic Return', fontsize=12)
     ax1.axhline(y=6, color='gray', linestyle='--', linewidth=1)
     ax1.axhline(y=-6, color='gray', linestyle='--', linewidth=1)
     ax1.grid(True)
@@ -503,9 +504,10 @@ if __name__ == "__main__":
 
     if args.test_model:
         # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__4911__20241027-train-good/PPO_fv_v11_244.pth"
-        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241016-train/PPO_fv_v11_140.pth"
+        # model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241016-train/PPO_fv_v11_140.pth"
+        model_path = f"runs/EMB-fv-v11__ppo_fv_v11__643__20241016-train/PPO_fv_v11_244.pth"
         epsilon = 1e-8
-        eval_episodes = 40
+        eval_episodes = 5
         # use the rms in the first env
         # env = envs.envs[0] 
         # obs_rms = env.get_wrapper_attr('obs_rms')
@@ -558,8 +560,12 @@ if __name__ == "__main__":
             position_buffer.append(next_obs[0][2])
             velocity_buffer.append(next_obs[0][3])  #len(pos) = len(act) - 1
             action_buffer.append(6 * np.clip(actions.item(), -1, 1))
-            # reward_buffer.append(total_reward_test)    
-            reward_buffer.append(reward_test[0]) 
+            # reward_buffer.append(total_reward_test)  
+          
+            # reward_buffer.append(reward_test[0]) 
+
+            #use total return to show the step reward
+            reward_buffer.append(total_reward_test) 
 
             next_obs_norm = (next_obs - mean_avg) / np.sqrt(var_avg + epsilon)
             if k<300:
@@ -618,7 +624,7 @@ if __name__ == "__main__":
 
         with open(json_file_path, mode='w') as file:
             json.dump(rewards_data, file, indent=4)
-        # draw(position_buffers, velocity_buffers, action_buffers, reward_buffers)
+        draw(position_buffers, velocity_buffers, action_buffers, reward_buffers)
         # draw_action_reward(action_buffers, reward_buffers)
 
     envs.close()

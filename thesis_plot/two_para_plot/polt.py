@@ -101,7 +101,7 @@ for group_idx, group_paths in enumerate(file_paths_grouped):
         axes[file_idx].plot(times, values, label=f'{groups[group_idx]}', color=colors[group_idx])
         # axes[file_idx].set_title(labels[file_idx])
         axes[file_idx].set_ylabel(
-            ["Input Voltage (V)", "Step Reward", "Motor Position (rad)", "Motor Velocity (rad/s)"][file_idx]
+            ["Input Current (A)", "Step Reward", "Motor Position (rad)", "Motor Velocity (rad/s)"][file_idx]
         )
         axes[file_idx].grid(True)
 

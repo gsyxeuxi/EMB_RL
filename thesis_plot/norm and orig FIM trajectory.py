@@ -137,8 +137,8 @@ class FI_matrix(object):
 # Initial state
 x_0 = torch.tensor([0.0, 0.0], dtype=torch.float64)
 chi = torch.zeros((2, 4), dtype=torch.float64)
-fi_info = torch.eye(4, dtype=torch.float64) * 1e-4
-# fi_info = torch.diag(torch.tensor([0.0, 0.0, 0.0, 0.0]))
+# fi_info = torch.eye(4, dtype=torch.float64) * 1e-4
+fi_info = torch.diag(torch.tensor([0.0, 0.0, 0.0, 0.0]))
 det_T = 0.001  # Time step
 # theta = torch.tensor([2.16e-5], dtype=torch.float64)
 theta = torch.tensor([21.7e-03, 23.04, 10.37e-3, 2.16e-5], dtype=torch.float64)
@@ -196,10 +196,11 @@ for k in range(200):  # 350 = 0.35s
     log_det_scale = torch.log(det_fi_scale)
     det_fi = torch.det(fi_info)
     log_det = torch.log(det_fi)
-    # det_fi_values.append(det_fi.item())
-    # log_dets.append(log_det.item())
-    det_fi_values.append(det_fi_scale.item())
-    log_dets.append(log_det_scale.item())
+
+    det_fi_values.append(det_fi.item())
+    log_dets.append(log_det.item())
+    # det_fi_values.append(det_fi_scale.item())
+    # log_dets.append(log_det_scale.item())
 
     step_reward_scale = log_det_scale - log_det_previous_scale
     total_reward_scale = total_reward_scale + step_reward_scale
@@ -214,85 +215,19 @@ for k in range(200):  # 350 = 0.35s
         cond_values.append(np.nan)
         # print(cond_values)
     else:
-        # cond_values.append(np.linalg.cond(fi_info.detach().numpy()))
-        cond_values.append(np.linalg.cond(fi_info_scale.detach().numpy()))
+        cond_values.append(np.linalg.cond(fi_info.detach().numpy()))
+        # cond_values.append(np.linalg.cond(fi_info_scale.detach().numpy()))
         
 
 print(fi_info_scale)
 #print the scaled FIM trajectory
-plt.figure(figsize=(14, 10))
-
-# Plot x0 vs Time (Input Signal)
-plt.subplot(3, 2, 1)
-plt.plot(time_values, u_values, color='b', linewidth=1.5)
-plt.xlabel('Time (ms)', fontsize=12)
-plt.ylabel('Input Voltage (V)', fontsize=12)
-plt.title('(a) Input Signal', fontsize=14)
-plt.ylim(bottom=0) 
-plt.grid(True)
-
-# Plot x0 vs Time (State Variable)
-plt.subplot(3, 2, 3)
-plt.plot(time_values, x0_values, color='b', linewidth=1.5)
-plt.xlabel('Time (ms)', fontsize=12)
-plt.ylabel('Motor position (rad)', fontsize=12)
-plt.title('(c) State Variable x0', fontsize=14)
-plt.grid(True)
-
-# Plot x1 vs Time (State Variable)
-plt.subplot(3, 2, 5)
-plt.plot(time_values, x1_values, color='b', linewidth=1.5)
-plt.xlabel('Time (ms)', fontsize=12)
-plt.ylabel('Motor velocity (rad/s)', fontsize=12)
-plt.title('(e) State Variable x1', fontsize=14)
-plt.grid(True)
-
-# Plot det vs Time (Determinant of Fisher Information Matrix)
-plt.subplot(3, 2, 2)
-plt.plot(time_values, det_fi_values, color='b', linewidth=1.5)
-plt.xlabel('Time (ms)', fontsize=12)
-plt.ylabel(r'$|\bar{M}|$', fontsize=12)
-plt.title('(b) Determinant of normalized FIM', fontsize=14)
-plt.grid(True)
-
-# Plot log_det vs Time (Log Determinant of Fisher Information Matrix)
-plt.subplot(3, 2, 4)
-plt.plot(time_values, log_dets, color='b', linewidth=1.5)
-plt.xlabel('Time (ms)', fontsize=12)
-plt.ylabel('log'+r'$|\bar{M}|$', fontsize=12)
-plt.title('(d) Logarithm of determinant of normalized FIM', fontsize=14)
-plt.grid(True)
-
-# Plot condition number vs Time (Step Rewards / Norm)
-plt.subplot(3, 2, 6)
-plt.plot(time_values, cond_values, color='b', linewidth=1.5)
-plt.xlabel('Time (ms)', fontsize=12)
-plt.ylabel(r'$\kappa(\bar{M})$', fontsize=12)
-plt.title('(f) Condition number of normalized FIM', fontsize=14)
-plt.grid(True)
-
-# Adjust layout for better spacing
-plt.tight_layout()
-
-# Show the final plot
-plt.show()
-
-
-
-
-
-
-
-
-
-##plt the origin FIM trajectory
 # plt.figure(figsize=(14, 10))
 
 # # Plot x0 vs Time (Input Signal)
 # plt.subplot(3, 2, 1)
 # plt.plot(time_values, u_values, color='b', linewidth=1.5)
 # plt.xlabel('Time (ms)', fontsize=12)
-# plt.ylabel('Input Voltage (V)', fontsize=12)
+# plt.ylabel('Input Current (A)', fontsize=12)
 # plt.title('(a) Input Signal', fontsize=14)
 # plt.ylim(bottom=0) 
 # plt.grid(True)
@@ -317,24 +252,24 @@ plt.show()
 # plt.subplot(3, 2, 2)
 # plt.plot(time_values, det_fi_values, color='b', linewidth=1.5)
 # plt.xlabel('Time (ms)', fontsize=12)
-# plt.ylabel('|M|', fontsize=12)
-# plt.title('(b) Determinant of FIM', fontsize=14)
+# plt.ylabel(r'$|\bar{M}|$', fontsize=12)
+# plt.title('(b) Determinant of normalized FIM', fontsize=14)
 # plt.grid(True)
 
 # # Plot log_det vs Time (Log Determinant of Fisher Information Matrix)
 # plt.subplot(3, 2, 4)
 # plt.plot(time_values, log_dets, color='b', linewidth=1.5)
 # plt.xlabel('Time (ms)', fontsize=12)
-# plt.ylabel('log |M|', fontsize=12)
-# plt.title('(d) Logarithm of determinant of FIM', fontsize=14)
+# plt.ylabel('log'+r'$|\bar{M}|$', fontsize=12)
+# plt.title('(d) Logarithm of determinant of normalized FIM', fontsize=14)
 # plt.grid(True)
 
 # # Plot condition number vs Time (Step Rewards / Norm)
 # plt.subplot(3, 2, 6)
 # plt.plot(time_values, cond_values, color='b', linewidth=1.5)
 # plt.xlabel('Time (ms)', fontsize=12)
-# plt.ylabel('\u03BA(M)', fontsize=12)
-# plt.title('(f) Condition number of FIM', fontsize=14)
+# plt.ylabel(r'$\kappa(\bar{M})$', fontsize=12)
+# plt.title('(f) Condition number of normalized FIM', fontsize=14)
 # plt.grid(True)
 
 # # Adjust layout for better spacing
@@ -342,4 +277,70 @@ plt.show()
 
 # # Show the final plot
 # plt.show()
+
+
+
+
+
+
+
+
+
+#plt the origin FIM trajectory
+plt.figure(figsize=(14, 10))
+
+# Plot x0 vs Time (Input Signal)
+plt.subplot(3, 2, 1)
+plt.plot(time_values, u_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('Input Current (A)', fontsize=12)
+plt.title('(a) Input Signal', fontsize=14)
+plt.ylim(bottom=0) 
+plt.grid(True)
+
+# Plot x0 vs Time (State Variable)
+plt.subplot(3, 2, 3)
+plt.plot(time_values, x0_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('Motor position (rad)', fontsize=12)
+plt.title('(c) State Variable x0', fontsize=14)
+plt.grid(True)
+
+# Plot x1 vs Time (State Variable)
+plt.subplot(3, 2, 5)
+plt.plot(time_values, x1_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('Motor velocity (rad/s)', fontsize=12)
+plt.title('(e) State Variable x1', fontsize=14)
+plt.grid(True)
+
+# Plot det vs Time (Determinant of Fisher Information Matrix)
+plt.subplot(3, 2, 2)
+plt.plot(time_values, det_fi_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('|M|', fontsize=12)
+plt.title('(b) Determinant of FIM', fontsize=14)
+plt.grid(True)
+
+# Plot log_det vs Time (Log Determinant of Fisher Information Matrix)
+plt.subplot(3, 2, 4)
+plt.plot(time_values, log_dets, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('log |M|', fontsize=12)
+plt.title('(d) Logarithm of determinant of FIM', fontsize=14)
+plt.grid(True)
+
+# Plot condition number vs Time (Step Rewards / Norm)
+plt.subplot(3, 2, 6)
+plt.plot(time_values, cond_values, color='b', linewidth=1.5)
+plt.xlabel('Time (ms)', fontsize=12)
+plt.ylabel('\u03BA(M)', fontsize=12)
+plt.title('(f) Condition number of FIM', fontsize=14)
+plt.grid(True)
+
+# Adjust layout for better spacing
+plt.tight_layout()
+
+# Show the final plot
+plt.show()
 

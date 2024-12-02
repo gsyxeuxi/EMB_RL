@@ -254,7 +254,7 @@ class FI_matrix(object):
 # velocity = np.array(velocity)
 # x2_value.append(500)
 # x2_value_dashed.append(0)
-# plt.figure(figsize=(10, 14))  # 增加图片长度，减少宽度
+# plt.figure(figsize=(10, 14)) 
 
 # plt.subplot(4, 1, 1)
 # plt.plot(t, x2_value, color="blue", linewidth=1.5, label="Input 1")
@@ -265,7 +265,7 @@ class FI_matrix(object):
 # plt.grid(alpha=0.6)
 # plt.legend(loc="upper right", fontsize=10)
 
-# # 图2：位移灵敏度
+
 # plt.subplot(4, 1, 2)
 # plt.plot(t, displacement, color="green", linewidth=1.5, label="Input 1")
 # plt.plot(t, displacement_dashed, linestyle="--", color="green", linewidth=1.5, label="Input 2")
@@ -275,7 +275,7 @@ class FI_matrix(object):
 # plt.grid(alpha=0.6)
 # plt.legend(loc="upper left", fontsize=10)
 
-# # 图3：速度灵敏度
+
 # plt.subplot(4, 1, 3)
 # plt.plot(t, velocity, label="Input 1", color="red", linewidth=1.5)
 # plt.plot(t, velocity_dashed, linestyle="--", color="red", linewidth=1.5, label="Input 2")
@@ -285,7 +285,7 @@ class FI_matrix(object):
 # plt.grid(alpha=0.6)
 # plt.legend(loc="upper right", fontsize=10)
 
-# # 图4：FIM递增
+
 # plt.subplot(4, 1, 4)
 # plt.plot(t, FIM, label="Input 1", color="purple", linewidth=1.5)
 # plt.plot(t, FIM_dashed, linestyle="--", color="purple", linewidth=1.5, label="Input 2")
@@ -294,7 +294,7 @@ class FI_matrix(object):
 # plt.title("(d) Increment of Fisher Information Matrix", fontsize=14)
 # plt.grid(alpha=0.6)
 # plt.legend(loc="upper left", fontsize=10)
-# # 调整布局
+
 # # plt.tight_layout(h_pad=2.0)
 # plt.tight_layout()
 # plt.savefig("plot.svg", format="svg")
